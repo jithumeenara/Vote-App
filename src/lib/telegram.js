@@ -75,6 +75,18 @@ export async function sendTelegramAlert(message) {
 }
 
 // Predefined Alert Templates
+// Helper to get color emoji based on ward number
+const getWardEmoji = (wardStr) => {
+    if (!wardStr) return '⚪';
+    // Extract number from string like "10 - WardName"
+    const match = wardStr.match(/\d+/);
+    const num = match ? parseInt(match[0]) : wardStr.length;
+
+    const emojis = ['🔴', '🔵', '🟢', '🟡', '🟣', '🟠', '🟤', '⚫'];
+    return emojis[num % emojis.length];
+};
+
+// Predefined Alert Templates
 export const TelegramAlerts = {
     login: (user, role) => {
         const userDisplay = role === 'Admin' ? 'Super Admin' : user;
@@ -83,7 +95,10 @@ export const TelegramAlerts = {
 
     newData: (type, details) => `📝 <b>New Data Added</b>\nType: ${type}\nDetails: ${details}\nTime: ${new Date().toLocaleString('en-IN')}`,
 
-    voteMarked: (voterName, slNo, panchayat, ward, booth) => `✅ <b>Vote Marked</b>\nVoter: ${voterName} (Sl.No: ${slNo})\nPanchayat: ${panchayat}\nWard: ${ward}\nBooth: ${booth}\nTime: ${new Date().toLocaleString('en-IN')}`,
+    voteMarked: (voterName, slNo, panchayat, ward, booth) => {
+        const wardEmoji = getWardEmoji(ward);
+        return `${wardEmoji} <b>Vote Marked</b>\n\n👤 Voter: ${voterName} (Sl.No: ${slNo})\n📍 Panchayat: ${panchayat}\n${wardEmoji} Ward: ${ward}\n🗳️ Booth: ${booth}\n🕒 Time: ${new Date().toLocaleString('en-IN')}`;
+    },
 
     aiQuery: (user, question) => `🤖 <b>AI Assistant Query</b>\nUser: ${user}\nQuestion: "${question}"\nTime: ${new Date().toLocaleString('en-IN')}`
 };

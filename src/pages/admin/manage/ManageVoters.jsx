@@ -4,10 +4,12 @@ import { Edit, Trash2, Save, X, Search, Bot } from 'lucide-react';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import ConfirmModal from '../../../components/ConfirmModal';
 import { useAuth } from '../../../context/AuthContext';
+import { useToast } from '../../../context/ToastContext';
 import { transliterateToMalayalam } from '../../../lib/ai';
 
 export default function ManageVoters() {
     const { user } = useAuth();
+    const { addToast } = useToast();
     const [panchayats, setPanchayats] = useState([]);
     const [wards, setWards] = useState([]);
     const [booths, setBooths] = useState([]);
@@ -128,18 +130,26 @@ export default function ManageVoters() {
         if (!deleteId) return;
 
         if (isWardMember) {
-            alert('വാർഡ് മെമ്പർക്ക് വോട്ടർമാരെ ഡിലീറ്റ് ചെയ്യാൻ അനുവാദമില്ല.');
+            addToast('വാർഡ് മെമ്പർക്ക് വോട്ടർമാരെ ഡിലീറ്റ് ചെയ്യാൻ അനുവാദമില്ല.', 'error');
             setIsDeleteModalOpen(false);
             return;
         }
 
-        const { error } = await supabase.from('voters').delete().eq('id', deleteId);
-        if (error) {
-            alert('പിശക്: ' + error.message);
-        } else {
-            setVoters(voters.filter(v => v.id !== deleteId));
-        }
+        // Optimistic Update
+        const previousVoters = [...voters];
+        setVoters(voters.filter(v => v.id !== deleteId));
+        setIsDeleteModalOpen(false);
         setDeleteId(null);
+        addToast('വോട്ടറെ നീക്കം ചെയ്തു', 'success');
+
+        try {
+            const { error } = await supabase.from('voters').delete().eq('id', deleteId);
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error deleting voter:', error);
+            addToast('നീക്കം ചെയ്യുന്നത് പരാജയപ്പെട്ടു: ' + error.message, 'error');
+            setVoters(previousVoters); // Revert
+        }
     }
 
     function startEdit(voter) {
@@ -149,26 +159,41 @@ export default function ManageVoters() {
 
     async function saveEdit(id) {
         if (isWardMember) {
-            alert('വാർഡ് മെമ്പർക്ക് വോട്ടർമാരെ എഡിറ്റ് ചെയ്യാൻ അനുവാദമില്ല.');
+            addToast('വാർഡ് മെമ്പർക്ക് വോട്ടർമാരെ എഡിറ്റ് ചെയ്യാൻ അനുവാദമില്ല.', 'error');
             return;
         }
 
-        const { error } = await supabase.from('voters').update({
-            name: editData.name,
+        // Optimistic Update
+        const previousVoters = [...voters];
+        const optimisticVoter = {
+            ...editData,
+            id,
             sl_no: parseInt(editData.sl_no),
-            guardian_name: editData.guardian_name,
-            house_name: editData.house_name,
-            age: parseInt(editData.age),
-            gender: editData.gender,
-            id_card_no: editData.id_card_no,
-            status: editData.status
-        }).eq('id', id);
+            age: parseInt(editData.age)
+        };
 
-        if (error) {
-            alert('പിശക്: ' + error.message);
-        } else {
-            setVoters(voters.map(v => v.id === id ? { ...editData } : v));
-            setEditingId(null);
+        setVoters(voters.map(v => v.id === id ? optimisticVoter : v));
+        setEditingId(null);
+        addToast('മാറ്റങ്ങൾ സേവ് ചെയ്തു', 'success');
+
+        try {
+            const { error } = await supabase.from('voters').update({
+                name: editData.name,
+                sl_no: parseInt(editData.sl_no),
+                guardian_name: editData.guardian_name,
+                house_name: editData.house_name,
+                age: parseInt(editData.age),
+                gender: editData.gender,
+                id_card_no: editData.id_card_no,
+                status: editData.status
+            }).eq('id', id);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error updating voter:', error);
+            addToast('അപ്‌ഡേറ്റ് പരാജയപ്പെട്ടു: ' + error.message, 'error');
+            setVoters(previousVoters); // Revert
+            setEditingId(id); // Re-open edit
         }
     }
 

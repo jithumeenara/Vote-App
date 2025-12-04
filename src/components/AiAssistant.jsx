@@ -53,9 +53,7 @@ export default function AiAssistant() {
         setLoading(true);
 
         try {
-            // Send Telegram Alert (Async, don't wait)
-            const userName = isWardMember ? `Ward Member (Ward ${user.ward_id})` : 'Admin';
-            sendTelegramAlert(TelegramAlerts.aiQuery(userName, userMsg.text));
+
 
             // 1. Parse User Query Intent
             const queryIntent = await parseUserQuery(userMsg.text);
@@ -71,7 +69,18 @@ export default function AiAssistant() {
                     if (queryIntent.type === 'count') {
                         query = query.select('*', { count: 'exact', head: true });
                     } else {
-                        query = query.select('*').limit(queryIntent.limit || 5);
+                        // Enhanced Select with Joins for better context
+                        if (queryIntent.table === 'voters') {
+                            query = query.select('*, booths(name, booth_no), wards(name, ward_no, panchayats(name))').limit(queryIntent.limit || 5);
+                        } else if (queryIntent.table === 'booths') {
+                            query = query.select('*, wards(name, ward_no, panchayats(name))').limit(queryIntent.limit || 5);
+                        } else if (queryIntent.table === 'wards') {
+                            query = query.select('*, panchayats(name)').limit(queryIntent.limit || 5);
+                        } else if (queryIntent.table === 'candidates') {
+                            query = query.select('*, wards(name, ward_no, panchayats(name))').limit(queryIntent.limit || 5);
+                        } else {
+                            query = query.select('*').limit(queryIntent.limit || 5);
+                        }
                     }
 
                     // Apply Filters
@@ -101,6 +110,9 @@ export default function AiAssistant() {
                             query = query.eq('ward_id', user.ward_id);
                         } else if (queryIntent.table === 'wards') {
                             query = query.eq('id', user.ward_id);
+                        } else if (queryIntent.table === 'panchayats') {
+                            // Allow querying panchayats, but maybe we could restrict to the user's panchayat if needed.
+                            // For now, let's allow it as it's general info.
                         }
                     }
                     // -----------------------------------------
@@ -146,7 +158,7 @@ export default function AiAssistant() {
             setMessages(prev => [...prev, { role: 'assistant', text: responseText }]);
         } catch (error) {
             console.error(error);
-            setMessages(prev => [...prev, { role: 'assistant', text: 'ക്ഷമിക്കണം, ഒരു തകരാർ സംഭവിച്ചു.' }]);
+            setMessages(prev => [...prev, { role: 'assistant', text: `ക്ഷമിക്കണം, ഒരു തകരാർ സംഭവിച്ചു: ${error.message || 'Unknown error'}` }]);
         } finally {
             setLoading(false);
         }

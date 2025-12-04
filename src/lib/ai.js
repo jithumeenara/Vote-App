@@ -66,7 +66,7 @@ export async function transliterateToMalayalam(text) {
 
         const completion = await openai.chat.completions.create({
             messages: [{ role: "system", content: prompt }],
-            model: "gpt-3.5-turbo",
+            model: "gpt-4o",
         });
 
         const malayalamText = completion.choices[0].message.content.trim();
@@ -85,32 +85,49 @@ export async function askDatabaseQuestion(question, contextData = null) {
 
         const openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
 
-        let prompt = `You are a helpful and intelligent AI assistant for a Voter Management System in Kerala.
-        Your goal is to provide accurate, natural, and easy-to-understand answers to the user's questions.
+        let prompt = `### ROLE AND OBJECTIVE
+You are an intelligent and professional Data Assistant powered by AI. Your goal is to assist users by analyzing data from a Supabase database and answering their questions accurately.
 
-        Important Instructions:
-        1. Language: ALWAYS answer in clear, natural Malayalam (മലയാളം).
-        2. Data Transliteration: The provided 'Context Data' contains names and addresses in English. You MUST transliterate these into Malayalam when presenting them.
-           - Example: If context has "Name: Jithu, House: Vadakkethil", you should say "പേര്: ജിത്തു, വീട്ടുപേര്: വടക്കേതിൽ".
-        3. Data Presentation:
-           - Use bullet points for lists.
-           - Format: "• [Malayalam Label]: [Malayalam Value]"
-        4. Input Analysis: Understand Malayalam, Manglish, and English inputs.
-        5. Tone: Polite, helpful, and respectful.
-        6. Context: Use the provided 'Context Data' to answer. If the answer is NOT in the context, say "ക്ഷമിക്കണം, എനിക്ക് ആ വിവരം ലഭ്യമല്ല".
+### KEY RESPONSIBILITIES
+1.  **Analyze Data:** You will receive database schema information and/or retrieved data context. Use this to interpret the user's query.
+2.  **Language Requirement:** You must answer the user's final question in **Professional Malayalam (മലയാളം)**.
+3.  **Tone:** Maintain a formal, polite, and helpful tone (similar to a banking or government service official in Kerala).
 
-        User Question: "${question}"
-        `;
+### DATABASE CONTEXT
+You have access to the following Supabase Table Schema:
+- voters: id, booth_id, sl_no, name, guardian_name, house_name, age, gender, id_card_no, house_no, status, has_voted
+- booths: id, ward_id, booth_no, name
+- wards: id, panchayat_id, ward_no, name
+- panchayats: id, name
+- candidates: id, ward_id, name, photo_url, symbol_url, front, quote
+- profiles: id, role, ward_id
+- system_settings: key, value, description
+- ward_users: id, username, panchayat_id, ward_id, is_active
+
+### OPERATIONAL GUIDELINES
+1.  **Accuracy:** specific facts must be based strictly on the provided database context. Do not hallucinate or invent data.
+2.  **Privacy:** Do not reveal sensitive fields (like passwords or API keys) even if they exist in the schema.
+3.  **Formatting:** Use bullet points or tables to present data clearly.
+4.  **Unknown Answers:** If the database does not contain the answer, politely inform the user in Malayalam that the information is unavailable.
+
+### TRANSLATION STYLE GUIDE (MALAYALAM)
+-   Do not use colloquial or slang Malayalam.
+-   Use clear, grammatically correct, formal Malayalam.
+-   **Example Greeting:** instead of "Hi", use "നമസ്കാരം" (Namaskaram).
+-   **Example Data Presentation:** "താങ്കൾ ആവശ്യപ്പെട്ട വിവരങ്ങൾ താഴെ നൽകുന്നു" (Here is the information you requested).
+
+User Question: "${question}"
+`;
 
         if (contextData) {
-            prompt += `\nContext Data: ${JSON.stringify(contextData)}`;
+            prompt += `\n### RETRIEVED DATA CONTEXT\n${JSON.stringify(contextData, null, 2)}`;
         } else {
             prompt += `\nNote: If the user asks for specific data that you don't have in the context, politely explain that you can only answer based on the data provided or general knowledge.`;
         }
 
         const completion = await openai.chat.completions.create({
             messages: [{ role: "system", content: prompt }],
-            model: "gpt-3.5-turbo",
+            model: "gpt-4o",
         });
 
         return completion.choices[0].message.content;
@@ -136,16 +153,20 @@ export async function parseUserQuery(question) {
         const prompt = `You are a database query parser for a Voter Management System.
         Your task is to convert the user's natural language question into a structured JSON object representing a database query.
         
-        Database Schema:
-        - voters: id, sl_no, id_card_no, name, gender ('Male', 'Female'), age, house_name, house_no, guardian_name, booth_id, status ('Active', 'delete', 'shifted')
-        - booths: id, name, booth_no, ward_id
-        - wards: id, name, ward_no, panchayat_id
-        - candidates: id, name, party, ward_id
+        ### DATABASE SCHEMA
+        - voters: id, booth_id, sl_no, name, guardian_name, house_name, age, gender, id_card_no, house_no, status, has_voted
+        - booths: id, ward_id, booth_no, name
+        - wards: id, panchayat_id, ward_no, name
+        - panchayats: id, name
+        - candidates: id, ward_id, name, photo_url, symbol_url, front, quote
+        - profiles: id, role, ward_id
+        - system_settings: key, value, description
+        - ward_users: id, username, panchayat_id, ward_id, is_active
 
         Output JSON Format:
         {
             "type": "count" | "list" | "general",
-            "table": "voters" | "booths" | "candidates" | "wards" | null,
+            "table": "voters" | "booths" | "candidates" | "wards" | "panchayats" | null,
             "filters": [
                 { "column": "column_name", "operator": "eq" | "gt" | "lt" | "gte" | "lte" | "ilike", "value": "value" }
             ],
@@ -154,30 +175,39 @@ export async function parseUserQuery(question) {
 
         Rules:
         - If the question is a greeting or general question not requiring data, set "type": "general".
-        - If the user asks "how many", set "type": "count".
-        - If the user asks "list", "show", "details", "who is", "search", set "type": "list".
-        - ALWAYS use "ilike" operator for 'name', 'house_name', 'guardian_name' to ensure case-insensitive partial matches.
-        - Map "men" or "males" to gender='Male', "women" or "females" to gender='Female'.
+        - If the user asks "how many", "count", "total", "ethra", "ennam", "എത്ര", "എണ്ണം", set "type": "count".
+        - If the user asks "list", "show", "details", "who is", "search", "aarokke", "evide", set "type": "list".
+        - ALWAYS use "ilike" operator for 'name', 'house_name', 'guardian_name', 'party', 'front' to ensure case-insensitive partial matches.
+        - Map Malayalam/Manglish gender terms to database values:
+            - "male", "mail", "aanu", "aanungal", "purushanmar", "men", "males", "മെയിൽ", "ആണുങ്ങൾ", "പുരുഷന്മാർ", "പുരുഷൻമാർ" -> gender='Male'
+            - "female", "femail", "pennu", "pennungal", "sthreekal", "women", "females", "ഫീമെയിൽ", "പെണ്ണുങ്ങൾ", "സ്ത്രീകൾ" -> gender='Female'
+        - If the query implies looking for people/voters (e.g., asking about gender, age, house), default to "table": "voters".
         - Understand Manglish inputs (e.g., "Jithuvinte booth eth" -> search table='voters', name ilike 'Jithu').
         - IMPORTANT: The database stores names in English. If the user searches in Malayalam (e.g., "ജിത്തു"), transliterate it to English (e.g., "Jithu") for the 'value'.
         - If searching by ID Card, use 'id_card_no'. If searching by Serial Number, use 'sl_no'.
         - Return ONLY the JSON object. No markdown formatting.
+
+        Examples:
+        - "പുരുഷന്മാർ എത്ര എണ്ണം" -> { "type": "count", "table": "voters", "filters": [{ "column": "gender", "operator": "eq", "value": "Male" }] }
+        - "സ്ത്രീകൾ എത്ര" -> { "type": "count", "table": "voters", "filters": [{ "column": "gender", "operator": "eq", "value": "Female" }] }
+        - "ജിത്തുവിന്റെ ബൂത്ത് ഏതാണ്" -> { "type": "list", "table": "voters", "filters": [{ "column": "name", "operator": "ilike", "value": "Jithu" }] }
 
         User Question: "${question}"
         `;
 
         const completion = await openai.chat.completions.create({
             messages: [{ role: "system", content: prompt }],
-            model: "gpt-3.5-turbo",
+            model: "gpt-4o",
         });
 
         let text = completion.choices[0].message.content.trim();
 
-        // Remove markdown code blocks if present
-        if (text.startsWith('```json')) {
-            text = text.replace(/^```json\n/, '').replace(/\n```$/, '');
-        } else if (text.startsWith('```')) {
-            text = text.replace(/^```\n/, '').replace(/\n```$/, '');
+        // Robust JSON extraction
+        const jsonStartIndex = text.indexOf('{');
+        const jsonEndIndex = text.lastIndexOf('}');
+
+        if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+            text = text.substring(jsonStartIndex, jsonEndIndex + 1);
         }
 
         return JSON.parse(text);

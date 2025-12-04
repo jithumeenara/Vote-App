@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { ChevronRight, Users, Vote } from 'lucide-react';
+import { ChevronRight, ChevronDown, Users, Vote } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function BoothList() {
@@ -56,9 +56,27 @@ export default function BoothList() {
 
             {/* Scroll Down Indicator */}
             {candidates.length > 0 && (
-                <div className="scroll-down-indicator" style={{ margin: '0 0 2rem 0' }} onClick={() => document.getElementById('booths-section').scrollIntoView({ behavior: 'smooth' })}>
-                    <span className="scroll-text">നിങ്ങളുടെ ബൂത്ത് തിരഞ്ഞെടുക്കുക</span>
-                    <ChevronRight size={32} style={{ transform: 'rotate(90deg)' }} />
+                <div
+                    className="scroll-down-indicator"
+                    style={{
+                        margin: '0 auto 2rem auto',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                    }}
+                    onClick={() => document.getElementById('booths-section').scrollIntoView({ behavior: 'smooth' })}
+                >
+                    <span className="scroll-text" style={{ color: '#cf2e4d', fontSize: '1.2rem', fontWeight: 'bold' }}>
+                        നിങ്ങളുടെ ബൂത്ത് തിരഞ്ഞെടുക്കുക
+                    </span>
+                    <ChevronDown
+                        size={32}
+                        className="animate-bounce"
+                        style={{ color: '#cf2e4d' }}
+                    />
                 </div>
             )}
 
@@ -72,7 +90,7 @@ export default function BoothList() {
                         <div key={candidate.id} className="election-poster">
                             <div className="poster-top-badges">
                                 <div className="slogan-badge">
-                                    {candidate.quote}
+                                    {candidate.quote || 'ചുറ്റിക അരിവാൾ നക്ഷത്രം'}
                                 </div>
                                 <div className="front-badge-container">
                                     <div className="ward-badge-text">{wardDetails?.name} വാർഡ്</div>
@@ -94,8 +112,7 @@ export default function BoothList() {
                                     <img src={candidate.symbol_url} alt="Symbol" className="poster-symbol-large" />
                                 )}
                                 <div className="vote-appeal-text">
-                                    <span className="candidate-name-highlight">{candidate.name}</span>-യെ
-                                    <br />
+                                    <span className="candidate-name-highlight">സഖാവ്. {candidate.name}-യെ</span>
                                     വിജയിപ്പിക്കുക
                                 </div>
                             </div>

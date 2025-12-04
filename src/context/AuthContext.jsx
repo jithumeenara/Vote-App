@@ -26,27 +26,34 @@ export const AuthProvider = ({ children }) => {
 
         // 2. Check Supabase Session (for Admin)
         const getSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                if (error) throw error;
 
-            if (session?.user) {
-                try {
-                    const { data: profile } = await supabase
-                        .from('profiles')
-                        .select('*')
-                        .eq('id', session.user.id)
-                        .single();
+                if (session?.user) {
+                    try {
+                        const { data: profile } = await supabase
+                            .from('profiles')
+                            .select('*')
+                            .eq('id', session.user.id)
+                            .single();
 
-                    if (profile) {
-                        session.user.role = profile.role;
-                        session.user.ward_id = profile.ward_id;
+                        if (profile) {
+                            session.user.role = profile.role;
+                            session.user.ward_id = profile.ward_id;
+                        }
+                    } catch (error) {
+                        console.error('Error fetching profile:', error);
                     }
-                } catch (error) {
-                    console.error('Error fetching profile:', error);
                 }
-            }
 
-            setUser(session?.user ?? null);
-            setLoading(false);
+                setUser(session?.user ?? null);
+            } catch (error) {
+                console.error('Error checking session:', error);
+                setUser(null);
+            } finally {
+                setLoading(false);
+            }
         };
 
         getSession();

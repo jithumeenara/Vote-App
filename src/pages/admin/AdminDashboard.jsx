@@ -113,19 +113,21 @@ export default function AdminDashboard() {
                     <button
                         onClick={() => setIsPasswordModalOpen(true)}
                         className="btn btn-secondary"
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem' }}
+                        title="പാസ്‌വേഡ് മാറ്റുക"
                     >
                         <Key size={20} />
-                        പാസ്‌വേഡ് മാറ്റുക
+                        <span className="hide-on-mobile">പാസ്‌വേഡ് മാറ്റുക</span>
                     </button>
 
                     <button
                         onClick={signOut}
                         className="btn btn-secondary"
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderColor: 'var(--danger)', color: 'var(--danger)' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderColor: 'var(--danger)', color: 'var(--danger)', padding: '0.5rem' }}
+                        title="ലോഗൗട്ട്"
                     >
                         <LogOut size={20} />
-                        ലോഗൗട്ട്
+                        <span className="hide-on-mobile">ലോഗൗട്ട്</span>
                     </button>
                 </div>
             </div>

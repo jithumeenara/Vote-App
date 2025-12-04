@@ -164,6 +164,12 @@ export default function MarkVotes() {
     const confirmVote = async () => {
         if (!confirmingVoter) return;
 
+        // Optimistic Update
+        const previousVoters = [...voters];
+        setVoters(prev => prev.map(v => v.id === confirmingVoter.id ? { ...v, has_voted: true } : v));
+        setConfirmingVoter(null);
+        addToast('Voted successfully', 'success');
+
         try {
             const { error } = await supabase
                 .from('voters')
@@ -171,10 +177,6 @@ export default function MarkVotes() {
                 .eq('id', confirmingVoter.id);
 
             if (error) throw error;
-
-            // Update local state
-            setVoters(prev => prev.map(v => v.id === confirmingVoter.id ? { ...v, has_voted: true } : v));
-            addToast('Voted successfully', 'success');
 
             // Send Telegram Alert
             const ward = wards.find(w => w.id === selectedWard);
@@ -188,14 +190,19 @@ export default function MarkVotes() {
 
             sendTelegramAlert(TelegramAlerts.voteMarked(confirmingVoter.name, confirmingVoter.sl_no, panchayatName, wardName, boothName));
 
-            setConfirmingVoter(null);
         } catch (error) {
             console.error('Error marking vote:', error);
-            addToast('Failed to mark vote. Check if "has_voted" column exists.', 'error');
+            addToast('Failed to mark vote. Reverting...', 'error');
+            setVoters(previousVoters); // Revert
         }
     };
 
     const handleUndo = async (voterId) => {
+        // Optimistic Update
+        const previousVoters = [...voters];
+        setVoters(prev => prev.map(v => v.id === voterId ? { ...v, has_voted: false } : v));
+        addToast('Vote undone successfully', 'success');
+
         try {
             const { error } = await supabase
                 .from('voters')
@@ -203,13 +210,10 @@ export default function MarkVotes() {
                 .eq('id', voterId);
 
             if (error) throw error;
-
-            // Update local state
-            setVoters(prev => prev.map(v => v.id === voterId ? { ...v, has_voted: false } : v));
-            addToast('Vote undone successfully', 'success');
         } catch (error) {
             console.error('Error undoing vote:', error);
-            addToast('Failed to undo vote', 'error');
+            addToast('Failed to undo vote. Reverting...', 'error');
+            setVoters(previousVoters); // Revert
         }
     };
 
