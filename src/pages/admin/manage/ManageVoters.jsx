@@ -158,10 +158,10 @@ export default function ManageVoters() {
     }
 
     async function saveEdit(id) {
-        if (isWardMember) {
-            addToast('വാർഡ് മെമ്പർക്ക് വോട്ടർമാരെ എഡിറ്റ് ചെയ്യാൻ അനുവാദമില്ല.', 'error');
-            return;
-        }
+        // if (isWardMember) {
+        //     addToast('വാർഡ് മെമ്പർക്ക് വോട്ടർമാരെ എഡിറ്റ് ചെയ്യാൻ അനുവാദമില്ല.', 'error');
+        //     return;
+        // }
 
         // Optimistic Update
         const previousVoters = [...voters];
@@ -327,7 +327,7 @@ export default function ManageVoters() {
                 <div className="grid">
                     {filteredVoters.map((voter) => (
                         <div key={voter.id} className="card" style={{ padding: '1rem', position: 'relative', overflow: 'hidden' }}>
-                            {(voter.status === 'shifted' || voter.status === 'deleted') && (
+                            {voter.status !== 'active' && (
                                 <div style={{
                                     position: 'absolute',
                                     top: 0,
@@ -342,7 +342,9 @@ export default function ManageVoters() {
                                     pointerEvents: 'none'
                                 }}>
                                     <div style={{
-                                        backgroundColor: voter.status === 'deleted' ? '#ef4444' : '#f59e0b',
+                                        backgroundColor: voter.status === 'deleted' ? '#ef4444' :
+                                            voter.status === 'death' ? '#000000' :
+                                                voter.status === 'duplicate' ? '#7c3aed' : '#f59e0b',
                                         color: 'white',
                                         padding: '0.25rem 1rem',
                                         fontSize: '1rem',
@@ -352,7 +354,7 @@ export default function ManageVoters() {
                                         boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
                                         textTransform: 'uppercase'
                                     }}>
-                                        {voter.status === 'shifted' ? 'SHIFTED' : 'DELETED'}
+                                        {voter.status.replace(/_/g, ' ')}
                                     </div>
                                 </div>
                             )}
@@ -392,6 +394,10 @@ export default function ManageVoters() {
                                             <option value="active">Active</option>
                                             <option value="shifted">Shifted</option>
                                             <option value="deleted">Deleted</option>
+                                            <option value="death">Death</option>
+                                            <option value="gulf">Gulf</option>
+                                            <option value="out_of_place">Out of Place</option>
+                                            <option value="duplicate">Duplicate</option>
                                         </select>
                                     </div>
 

@@ -26,6 +26,9 @@ import Reports from './pages/admin/Reports';
 import GenerateSlips from './pages/admin/GenerateSlips';
 import Settings from './pages/admin/Settings';
 import MarkVotes from './pages/admin/MarkVotes';
+import VoteVerification from './pages/admin/VoteVerification';
+import ManageFronts from './pages/admin/manage/ManageFronts';
+import VoterStatusReports from './pages/admin/VoterStatusReports';
 
 function Layout({ children }) {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -158,6 +161,21 @@ function App() {
               <Route path="/admin/mark-votes" element={
                 <ProtectedRoute>
                   <MarkVotes />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/vote-verification" element={
+                <ProtectedRoute>
+                  <VoteVerification />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/manage/fronts" element={
+                <ProtectedRoute>
+                  <ManageFronts />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/voter-status-reports" element={
+                <ProtectedRoute>
+                  <VoterStatusReports />
                 </ProtectedRoute>
               } />
             </Routes>

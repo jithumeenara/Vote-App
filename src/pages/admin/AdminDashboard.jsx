@@ -135,7 +135,7 @@ export default function AdminDashboard() {
             <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} />
 
             {/* Stats Tiles */}
-            <div className="grid grid-3" style={{ marginBottom: '2rem' }}>
+            <div className="stats-grid grid grid-3" style={{ marginBottom: '2rem' }}>
                 <div className="card" style={{ textAlign: 'center', padding: '1.5rem' }}>
                     <h3 style={{ fontSize: '2.5rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>{stats.total}</h3>
                     <p style={{ color: 'var(--text-light)', fontWeight: '600' }}>ആകെ വോട്ടർമാർ</p>
@@ -176,10 +176,18 @@ export default function AdminDashboard() {
                     <CheckCircle size={48} style={{ marginBottom: '0.5rem' }} />
                     <h3 style={{ margin: 0 }}>വോട്ടിംഗ്</h3>
                 </Link>
+                <Link to="/admin/vote-verification" className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', background: '#f59e0b', color: 'white' }}>
+                    <CheckCircle size={48} style={{ marginBottom: '0.5rem' }} />
+                    <h3 style={{ margin: 0 }}>പരിശോധന</h3>
+                </Link>
+                <Link to="/admin/voter-status-reports" className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', background: '#64748b', color: 'white' }}>
+                    <FileText size={48} style={{ marginBottom: '0.5rem' }} />
+                    <h3 style={{ margin: 0 }}>Status Reports</h3>
+                </Link>
             </div>
 
             <h3 style={{ marginBottom: '1rem', color: 'var(--text-light)' }}>ഡാറ്റ ചേർക്കുക</h3>
-            <div className="grid grid-2" style={{ marginBottom: '3rem' }}>
+            <div className="action-grid grid grid-2" style={{ marginBottom: '3rem' }}>
                 {!isWardMember && (
                     <>
                         <Link to="/admin/add-panchayat" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -236,7 +244,7 @@ export default function AdminDashboard() {
             </div>
 
             <h3 style={{ marginBottom: '1rem', color: 'var(--text-light)' }}>ഡാറ്റ നിയന്ത്രിക്കുക (എഡിറ്റ് / ഡിലീറ്റ്)</h3>
-            <div className="grid grid-2">
+            <div className="action-grid grid grid-2">
                 {!isWardMember && (
                     <>
                         <Link to="/admin/manage/panchayats" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '4px solid var(--secondary)' }}>
@@ -278,6 +286,14 @@ export default function AdminDashboard() {
                     <div>
                         <h3 style={{ marginBottom: '0.25rem' }}>വോട്ടർമാർ</h3>
                         <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>വോട്ടർമാരെ എഡിറ്റ് / ഡിലീറ്റ് ചെയ്യുക</p>
+                    </div>
+                </Link>
+
+                <Link to="/admin/manage/fronts" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '4px solid var(--secondary)' }}>
+                    <Settings size={24} color="var(--secondary)" />
+                    <div>
+                        <h3 style={{ marginBottom: '0.25rem' }}>മുന്നണികൾ</h3>
+                        <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>മുന്നണികളെ നിയന്ത്രിക്കുക</p>
                     </div>
                 </Link>
 
