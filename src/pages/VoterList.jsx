@@ -66,134 +66,236 @@ export default function VoterList() {
     if (loading) return <LoadingSpinner text="വോട്ടർ പട്ടിക ലോഡുചെയ്യുന്നു..." />;
 
     return (
-        <div>
-            <div style={{ marginBottom: '2rem' }}>
-                <span style={{ color: 'var(--text-light)', fontSize: '1rem', display: 'block', marginBottom: '0.5rem' }}>
-                    {boothDetails?.wards?.panchayats?.name} / വാർഡ് {boothDetails?.wards?.ward_no}
-                </span>
-                <h1 style={{ color: 'var(--primary-bg)', marginBottom: '0.5rem' }}>{boothDetails?.name}</h1>
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-                    <div style={{ fontSize: '1rem', color: 'var(--text-light)', fontWeight: '600' }}>
-                        ആകെ വോട്ടർമാർ: {voters.length}
+        <div style={{ paddingBottom: '80px' }}>
+            {/* Sticky Search Header */}
+            <div style={{
+                position: 'sticky',
+                top: '0',
+                zIndex: 100,
+                background: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(10px)',
+                padding: '1rem',
+                margin: '0 -1rem', // Negative margin to stretch full width on mobile
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                marginBottom: '1rem'
+            }}>
+                <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', gap: '0.75rem' }}>
+                    <div style={{ position: 'relative', flex: 1 }}>
+                        <Search size={22} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--primary)' }} />
+                        <input
+                            type="text"
+                            placeholder="തിരയുക (പേര്, വീട്ടുപേര്, നമ്പർ...)"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '0.8rem 1rem 0.8rem 3rem',
+                                borderRadius: '50px',
+                                border: '2px solid #f3f4f6',
+                                background: '#f9fafb',
+                                fontSize: '1rem',
+                                outline: 'none',
+                                transition: 'all 0.3s ease',
+                                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                            onBlur={(e) => e.target.style.borderColor = '#f3f4f6'}
+                        />
                     </div>
+                </div>
+            </div>
+
+            {/* Booth Info Section */}
+            <div style={{ padding: '0 0 1.5rem 0', textAlign: 'center' }}>
+                <span style={{
+                    display: 'inline-block',
+                    padding: '0.25rem 0.75rem',
+                    background: '#fdf2f4',
+                    color: 'var(--primary)',
+                    borderRadius: '20px',
+                    fontSize: '0.85rem',
+                    fontWeight: '600',
+                    marginBottom: '0.75rem'
+                }}>
+                    {boothDetails?.wards?.panchayats?.name} • വാർഡ് {boothDetails?.wards?.ward_no}
+                </span>
+
+                <h1 style={{
+                    fontSize: '1.5rem',
+                    lineHeight: '1.3',
+                    marginBottom: '1rem',
+                    color: 'var(--primary-bg)'
+                }}>
+                    {boothDetails?.name}
+                </h1>
+
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div style={{
+                        background: '#f8fafc',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '12px',
+                        fontWeight: '600',
+                        color: '#64748b',
+                        fontSize: '0.9rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                    }}>
+                        <User size={16} />
+                        {voters.length} വോട്ടർമാർ
+                    </div>
+
 
                     {boothDetails?.contact_number && (
                         <a
                             href={`tel:${boothDetails.contact_number}`}
-                            className="btn btn-primary"
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.5rem',
-                                textDecoration: 'none',
-                                padding: '0.5rem 1rem',
+                                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                color: 'white',
+                                padding: '0.5rem 1.25rem',
                                 borderRadius: '50px',
-                                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                                textDecoration: 'none',
+                                fontWeight: '600',
+                                fontSize: '0.9rem',
+                                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
                             }}
                         >
-                            <Phone size={18} />
-                            <span>സഹായത്തിന് വിളിക്കുക (Call for Help)</span>
+                            <Phone size={16} fill="white" />
+                            സഹായത്തിന് വിളിക്കുക
                         </a>
                     )}
                 </div>
             </div>
 
-            <div className="search-bar">
-                <Search className="search-icon" size={24} />
-                <input
-                    type="text"
-                    className="search-input"
-                    placeholder="പേര്, ഐഡി കാർഡ്, വീട്ടുപേര് അല്ലെങ്കിൽ ക്രമനമ്പർ തിരയുക..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-            </div>
-
+            {/* Content Area */}
             {filteredVoters.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-light)' }}>
-                    "{searchTerm}" എന്ന പേരിൽ വോട്ടർമാരെ കണ്ടെത്തിയില്ല
+                <div style={{
+                    textAlign: 'center',
+                    padding: '4rem 1rem',
+                    color: 'var(--text-light)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '1rem'
+                }}>
+                    <div style={{ background: '#f3f4f6', padding: '1.5rem', borderRadius: '50%' }}>
+                        <Search size={32} color="#9ca3af" />
+                    </div>
+                    <div>
+                        {searchTerm ? (
+                            <p>"{searchTerm}" എന്ന പേരിൽ വോട്ടർമാരെ കണ്ടെത്തിയില്ല</p>
+                        ) : (
+                            <p>തുടങ്ങാൻ മുകളിൽ പേര് തിരയുക</p>
+                        )}
+                    </div>
                 </div>
             ) : (
                 <div className="grid grid-2">
-                    {filteredVoters.map((voter) => (
+                    {filteredVoters.map((voter, index) => (
                         <div key={voter.id} className="card voter-card" style={{
                             position: 'relative',
                             overflow: 'hidden',
-                            backgroundColor: (voter.status === 'shifted' || voter.status === 'deleted') ? '#fee2e2' : 'white'
+                            backgroundColor: (voter.status === 'shifted' || voter.status === 'deleted') ? '#fef2f2' : 'white',
+                            border: '1px solid #f1f5f9',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                            animation: `fadeIn 0.5s ease-out ${index * 0.05}s both`
                         }}>
                             {(voter.status === 'shifted' || voter.status === 'deleted') && (
                                 <div style={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    width: '100%',
-                                    height: '100%',
-                                    backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                                    zIndex: 20,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
+                                    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                                    zIndex: 10,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     pointerEvents: 'none'
                                 }}>
                                     <div style={{
-                                        backgroundColor: voter.status === 'deleted' ? '#ef4444' : '#f59e0b',
-                                        color: 'white',
-                                        padding: '0.5rem 2rem',
-                                        fontSize: '1.5rem',
-                                        fontWeight: '900',
-                                        transform: 'rotate(-15deg)',
-                                        border: '4px solid white',
-                                        boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+                                        color: voter.status === 'deleted' ? '#ef4444' : '#f59e0b',
+                                        fontSize: '1.2rem', fontWeight: '900',
+                                        transform: 'rotate(-10deg)',
+                                        border: '3px solid currentColor',
+                                        padding: '0.25rem 1rem',
                                         textTransform: 'uppercase',
-                                        letterSpacing: '2px'
+                                        letterSpacing: '2px',
+                                        background: 'rgba(255,255,255,0.9)'
                                     }}>
                                         {voter.status === 'shifted' ? 'SHIFTED' : 'DELETED'}
                                     </div>
                                 </div>
                             )}
-                            <div className="sl-no-badge" style={{ zIndex: 1, position: 'relative' }}>
-                                ക്രമനമ്പർ: {voter.sl_no}
-                            </div>
 
-                            <div style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'flex-start', gap: '1rem', position: 'relative', zIndex: 1 }}>
-                                <div style={{ background: '#fdf2f4', padding: '1rem', borderRadius: '50%' }}>
-                                    <User size={32} color="var(--primary)" />
+                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
+                                <div style={{
+                                    background: 'linear-gradient(135deg, #fdf2f4 0%, #fff 100%)',
+                                    minWidth: '50px',
+                                    height: '50px',
+                                    borderRadius: '12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    border: '1px solid #fce7f3'
+                                }}>
+                                    <span style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                                        {voter.sl_no}
+                                    </span>
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <h3 className="voter-name">{voter.name}</h3>
-                                    <div style={{ fontSize: '1rem', color: 'var(--text-light)', marginBottom: '0.5rem' }}>
-                                        {voter.guardian_name ? `രക്ഷിതാവ്: ${voter.guardian_name}` : ''}
-                                    </div>
+                                    <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1.1rem', color: '#1e293b' }}>{voter.name}</h3>
+                                    {voter.guardian_name && (
+                                        <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                            രക്ഷിതാവ്: {voter.guardian_name}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
-                            <div className="voter-details" style={{ marginTop: '1rem', position: 'relative', zIndex: 1 }}>
-                                <div className="detail-item">
-                                    <span className="detail-label">വീട്ടുനമ്പർ</span>
-                                    <span style={{ fontWeight: 600, fontSize: '1rem' }}>{voter.house_no || '-'}</span>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'minmax(max-content, 1fr) 1fr',
+                                gap: '0.75rem',
+                                marginTop: '1rem',
+                                paddingTop: '1rem',
+                                borderTop: '1px solid #f1f5f9',
+                                fontSize: '0.9rem'
+                            }}>
+                                <div>
+                                    <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.1rem' }}>വീട്ടുപേര്</div>
+                                    <div style={{ fontWeight: '500', color: '#334155' }}>{voter.house_name || '-'}</div>
                                 </div>
-                                <div className="detail-item">
-                                    <span className="detail-label">വീട്ടുപേര്</span>
-                                    <span style={{ fontWeight: 600, fontSize: '1rem' }}>{voter.house_name || '-'}</span>
+                                <div>
+                                    <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.1rem' }}>വീട്ടുനമ്പർ</div>
+                                    <div style={{ fontWeight: '500', color: '#334155' }}>{voter.house_no || '-'}</div>
                                 </div>
-                                <div className="detail-item">
-                                    <span className="detail-label">ഐഡി കാർഡ് നമ്പർ</span>
-                                    <span style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '1rem' }}>{voter.id_card_no || '-'}</span>
+                                <div>
+                                    <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.1rem' }}>ഐഡി കാർഡ്</div>
+                                    <div style={{ fontWeight: '600', color: 'var(--primary)', letterSpacing: '0.5px' }}>{voter.id_card_no || '-'}</div>
                                 </div>
-                                <div className="detail-item">
-                                    <span className="detail-label">വയസ്സ്</span>
-                                    <span style={{ fontWeight: 600 }}>{voter.age || '-'}</span>
-                                </div>
-                                <div className="detail-item">
-                                    <span className="detail-label">ലിംഗഭേദം</span>
-                                    <span style={{ fontWeight: 600 }}>{voter.gender || '-'}</span>
+                                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                    <div>
+                                        <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.1rem' }}>വയസ്സ്</div>
+                                        <div style={{ fontWeight: '500', color: '#334155' }}>{voter.age || '-'}</div>
+                                    </div>
+                                    <div>
+                                        <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.1rem' }}>ലിംഗം</div>
+                                        <div style={{ fontWeight: '500', color: '#334155' }}>{voter.gender || '-'}</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     ))}
                 </div>
             )}
+
+            <style>
+                {`
+                    @keyframes fadeIn {
+                        from { opacity: 0; transform: translateY(10px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+                `}
+            </style>
         </div>
     );
 }
