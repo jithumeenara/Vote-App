@@ -21,6 +21,8 @@ export default function VoterStatusReports() {
     const [selectedStatus, setSelectedStatus] = useState('shifted');
 
     const [voters, setVoters] = useState([]);
+    const [fronts, setFronts] = useState([]);
+    const [activeTab, setActiveTab] = useState('status_report');
     const [loading, setLoading] = useState(false);
 
     const isWardMember = user?.role === 'ward_member';
@@ -38,10 +40,16 @@ export default function VoterStatusReports() {
 
     useEffect(() => {
         fetchPanchayats();
+        fetchFronts();
         if (isWardMember && user?.ward_id) {
             fetchUserWardDetails();
         }
     }, [user]);
+
+    async function fetchFronts() {
+        const { data } = await supabase.from('fronts').select('*').order('id');
+        setFronts(data || []);
+    }
 
     async function fetchUserWardDetails() {
         const { data } = await supabase
@@ -156,11 +164,37 @@ export default function VoterStatusReports() {
         <div className="container">
             <div className="report-header">
                 <h2 style={{ color: 'var(--primary-bg)', margin: 0 }}>വോട്ടർ സ്റ്റാറ്റസ് റിപ്പോർട്ടുകൾ (Voter Status Reports)</h2>
-                {voters.length > 0 && (
-                    <button onClick={handleDownloadPdf} className="btn btn-primary">
-                        <FileDown size={20} /> PDF ഡൗൺലോഡ് ചെയ്യുക
-                    </button>
-                )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid #eee' }}>
+                <button
+                    onClick={() => setActiveTab('status_report')}
+                    style={{
+                        padding: '1rem',
+                        border: 'none',
+                        background: 'none',
+                        borderBottom: activeTab === 'status_report' ? '3px solid var(--primary)' : '3px solid transparent',
+                        color: activeTab === 'status_report' ? 'var(--primary)' : '#666',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                    }}
+                >
+                    Status Wise Lists
+                </button>
+                <button
+                    onClick={() => setActiveTab('front_report')}
+                    style={{
+                        padding: '1rem',
+                        border: 'none',
+                        background: 'none',
+                        borderBottom: activeTab === 'front_report' ? '3px solid var(--primary)' : '3px solid transparent',
+                        color: activeTab === 'front_report' ? 'var(--primary)' : '#666',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                    }}
+                >
+                    Front Wise Stats
+                </button>
             </div>
 
             {/* Filters */}
@@ -208,6 +242,7 @@ export default function VoterStatusReports() {
                             className="input"
                             value={selectedStatus}
                             onChange={e => setSelectedStatus(e.target.value)}
+                            disabled={activeTab === 'front_report'}
                         >
                             {statusOptions.map(opt => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -215,50 +250,124 @@ export default function VoterStatusReports() {
                         </select>
                     </div>
                 </div>
+                {activeTab === 'status_report' && voters.length > 0 && (
+                    <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+                        <button onClick={handleDownloadPdf} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <FileDown size={18} /> PDF Download
+                        </button>
+                    </div>
+                )}
+                {activeTab === 'front_report' && (
+                    <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+                        <button onClick={() => window.print()} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <FileDown size={18} /> Print Report
+                        </button>
+                    </div>
+                )}
             </div>
 
             {loading ? <LoadingSpinner /> : (
                 <div ref={componentRef} id="report-content" style={{ background: 'white', padding: '2rem', borderRadius: '8px' }}>
-                    <div style={{ textAlign: 'center', marginBottom: '2rem', borderBottom: '2px solid #eee', paddingBottom: '1rem' }}>
-                        <h1 style={{ fontSize: '1.5rem', color: 'var(--primary-bg)', marginBottom: '0.5rem' }}>
-                            {statusOptions.find(s => s.value === selectedStatus)?.label} Voters List
-                        </h1>
-                        <p style={{ color: '#666', marginBottom: '0.5rem' }}>
-                            Ward: {wards.find(w => w.id === selectedWard)?.ward_no} |
-                            Generated on: {new Date().toLocaleDateString()}
-                        </p>
-                        <p style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--primary)' }}>
-                            Total Voters: {voters.length}
-                        </p>
-                    </div>
+                    {activeTab === 'status_report' ? (
+                        <>
+                            <div style={{ textAlign: 'center', marginBottom: '2rem', borderBottom: '2px solid #eee', paddingBottom: '1rem' }}>
+                                <h1 style={{ fontSize: '1.5rem', color: 'var(--primary-bg)', marginBottom: '0.5rem' }}>
+                                    {statusOptions.find(s => s.value === selectedStatus)?.label} Voters List
+                                </h1>
+                                <p style={{ color: '#666', marginBottom: '0.5rem' }}>
+                                    Ward: {wards.find(w => w.id === selectedWard)?.ward_no} |
+                                    Generated on: {new Date().toLocaleDateString()}
+                                </p>
+                                <p style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--primary)' }}>
+                                    Total Voters: {voters.length}
+                                </p>
+                            </div>
 
-                    {voters.length > 0 ? (
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                            <thead>
-                                <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                                    <th style={{ padding: '0.75rem', textAlign: 'left' }}>SL No</th>
-                                    <th style={{ padding: '0.75rem', textAlign: 'left' }}>Name</th>
-                                    <th style={{ padding: '0.75rem', textAlign: 'left' }}>Guardian Name</th>
-                                    <th style={{ padding: '0.75rem', textAlign: 'left' }}>House Name</th>
-                                    <th style={{ padding: '0.75rem', textAlign: 'left' }}>Booth No</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {voters.map((voter, index) => (
-                                    <tr key={voter.id} style={{ borderBottom: '1px solid #eee' }}>
-                                        <td style={{ padding: '0.75rem' }}>{voter.sl_no}</td>
-                                        <td style={{ padding: '0.75rem', fontWeight: 'bold' }}>{voter.name}</td>
-                                        <td style={{ padding: '0.75rem' }}>{voter.guardian_name}</td>
-                                        <td style={{ padding: '0.75rem' }}>{voter.house_name}</td>
-                                        <td style={{ padding: '0.75rem' }}>{voter.booths?.booth_no}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                            {voters.length > 0 ? (
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                    <thead>
+                                        <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                                            <th style={{ padding: '0.75rem', textAlign: 'left' }}>SL No</th>
+                                            <th style={{ padding: '0.75rem', textAlign: 'left' }}>Name</th>
+                                            <th style={{ padding: '0.75rem', textAlign: 'left' }}>Guardian Name</th>
+                                            <th style={{ padding: '0.75rem', textAlign: 'left' }}>House Name</th>
+                                            <th style={{ padding: '0.75rem', textAlign: 'left' }}>Booth No</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {voters.map((voter, index) => (
+                                            <tr key={voter.id} style={{ borderBottom: '1px solid #eee' }}>
+                                                <td style={{ padding: '0.75rem' }}>{voter.sl_no}</td>
+                                                <td style={{ padding: '0.75rem', fontWeight: 'bold' }}>{voter.name}</td>
+                                                <td style={{ padding: '0.75rem' }}>{voter.guardian_name}</td>
+                                                <td style={{ padding: '0.75rem' }}>{voter.house_name}</td>
+                                                <td style={{ padding: '0.75rem' }}>{voter.booths?.booth_no}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                                    ഈ വിഭാഗത്തിൽ വോട്ടർമാരില്ല.
+                                </div>
+                            )}
+                        </>
                     ) : (
-                        <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-                            ഈ വിഭാഗത്തിൽ വോട്ടർമാരില്ല.
-                        </div>
+                        // FRONT REPORT
+                        <>
+                            <div style={{ textAlign: 'center', marginBottom: '2rem', borderBottom: '2px solid #eee', paddingBottom: '1rem' }}>
+                                <h1 style={{ fontSize: '1.5rem', color: 'var(--primary-bg)', marginBottom: '0.5rem' }}>
+                                    മുന്നണി തിരിച്ചുള്ള വോട്ട് കണക്ക് (Front Wise Vote Report)
+                                </h1>
+                                <p style={{ color: '#666', marginBottom: '0.5rem' }}>
+                                    Ward: {wards.find(w => w.id === selectedWard)?.ward_no} | {wards.find(w => w.id === selectedWard)?.name}
+                                </p>
+                            </div>
+
+                            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
+                                <thead>
+                                    <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #eee' }}>
+                                        <th style={{ padding: '1rem', textAlign: 'left' }}>മുന്നണി (Front)</th>
+                                        <th style={{ padding: '1rem', textAlign: 'center' }}>Total Supporters</th>
+                                        <th style={{ padding: '1rem', textAlign: 'center' }}>Voted</th>
+                                        <th style={{ padding: '1rem', textAlign: 'center' }}>Not Voted</th>
+                                        <th style={{ padding: '1rem', textAlign: 'center' }}>Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {fronts.map(front => {
+                                        // Need to be careful: 'voters' is filtered by current selectedStatus.
+                                        // Ideally for Front Report we want ALL Active voters usually.
+                                        // But here we rely on the filters set above.
+                                        // If user selected 'active', it shows stats for active.
+                                        const supporters = voters.filter(v => v.supported_front_id === front.id);
+                                        const voted = supporters.filter(v => v.has_voted).length;
+                                        const notVoted = supporters.length - voted;
+                                        const percentage = supporters.length > 0 ? ((voted / supporters.length) * 100).toFixed(1) : 0;
+
+                                        return (
+                                            <tr key={front.id} style={{ borderBottom: '1px solid #eee' }}>
+                                                <td style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: front.color || '#666' }}></div>
+                                                    <span style={{ fontWeight: '500' }}>{front.name}</span>
+                                                </td>
+                                                <td style={{ padding: '1rem', textAlign: 'center' }}>{supporters.length}</td>
+                                                <td style={{ padding: '1rem', textAlign: 'center', color: '#10b981', fontWeight: 'bold' }}>{voted}</td>
+                                                <td style={{ padding: '1rem', textAlign: 'center', color: '#ef4444' }}>{notVoted}</td>
+                                                <td style={{ padding: '1rem', textAlign: 'center' }}>{percentage}%</td>
+                                            </tr>
+                                        );
+                                    })}
+                                    <tr style={{ background: '#f8fafc', fontWeight: 'bold' }}>
+                                        <td style={{ padding: '1rem' }}>Total</td>
+                                        <td style={{ padding: '1rem', textAlign: 'center' }}>{voters.filter(v => v.supported_front_id).length}</td>
+                                        <td style={{ padding: '1rem', textAlign: 'center', color: '#10b981' }}>{voters.filter(v => v.supported_front_id && v.has_voted).length}</td>
+                                        <td style={{ padding: '1rem', textAlign: 'center', color: '#ef4444' }}>{voters.filter(v => v.supported_front_id && !v.has_voted).length}</td>
+                                        <td style={{ padding: '1rem', textAlign: 'center' }}>-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </>
                     )}
                 </div>
             )}

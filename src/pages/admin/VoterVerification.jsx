@@ -27,6 +27,7 @@ export default function VoteVerification() {
     const [verificationFilter, setVerificationFilter] = useState('all');
     const [voteStatusFilter, setVoteStatusFilter] = useState('all');
     const [isAtTop, setIsAtTop] = useState(true);
+    const [reportSubTab, setReportSubTab] = useState('detailed');
 
     const isWardMember = user?.role === 'ward_member';
 
@@ -351,7 +352,212 @@ export default function VoteVerification() {
                     >
                         Verification List
                     </button>
+                    <button
+                        className={`tab-btn ${activeTab === 'reports' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('reports')}
+                        style={{
+                            padding: '0.75rem 1.5rem',
+                            border: 'none',
+                            background: 'none',
+                            borderBottom: activeTab === 'reports' ? '3px solid var(--primary)' : '3px solid transparent',
+                            color: activeTab === 'reports' ? 'var(--primary)' : '#666',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Reports
+                    </button>
                 </div>
+
+                {activeTab === 'reports' && (
+                    <div className="reports-section">
+                        {!selectedBooth ? (
+                            <div style={{ textAlign: 'center', padding: '3rem', color: '#666', background: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                                റിപ്പോർട്ടുകൾ ലഭിക്കുന്നതിനായി ദയവായി ഒരു ബൂത്ത് തിരഞ്ഞെടുക്കുക. (Please select a booth to generate reports)
+                            </div>
+                        ) : (
+                            <div className="card" style={{ padding: '2rem' }}>
+                                <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid #eee' }}>
+                                    <button
+                                        onClick={() => setReportSubTab('detailed')}
+                                        style={{
+                                            padding: '0.75rem 1rem',
+                                            border: 'none',
+                                            background: 'none',
+                                            borderBottom: reportSubTab === 'detailed' ? '2px solid var(--primary)' : '2px solid transparent',
+                                            color: reportSubTab === 'detailed' ? 'var(--primary)' : '#666',
+                                            fontWeight: '600',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Detailed List
+                                    </button>
+                                    <button
+                                        onClick={() => setReportSubTab('summary')}
+                                        style={{
+                                            padding: '0.75rem 1rem',
+                                            border: 'none',
+                                            background: 'none',
+                                            borderBottom: reportSubTab === 'summary' ? '2px solid var(--primary)' : '2px solid transparent',
+                                            color: reportSubTab === 'summary' ? 'var(--primary)' : '#666',
+                                            fontWeight: '600',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Summary Report
+                                    </button>
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '1px solid #eee', paddingBottom: '1rem' }}>
+                                    <div>
+                                        <h3 style={{ margin: 0, color: 'var(--primary-bg)' }}>
+                                            {reportSubTab === 'detailed' ? 'വോട്ട് ചെയ്തവരുടെ പട്ടിക (Voted Members List)' : 'വോട്ട് സംഗ്രഹം (Vote Summary)'}
+                                        </h3>
+                                        <p style={{ margin: '0.5rem 0 0', color: '#666', fontSize: '0.9rem' }}>
+                                            Booth: {booths.find(b => b.id === selectedBooth)?.booth_no} - {booths.find(b => b.id === selectedBooth)?.name}
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => window.print()}
+                                        className="btn btn-primary"
+                                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                    >
+                                        <Save size={18} /> Print Report
+                                    </button>
+                                </div>
+
+                                {reportSubTab === 'summary' ? (
+                                    <div className="report-content">
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
+                                            <thead>
+                                                <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #eee' }}>
+                                                    <th style={{ padding: '1rem', textAlign: 'left' }}>മുന്നണി (Front)</th>
+                                                    <th style={{ padding: '1rem', textAlign: 'center' }}>Total Supporters</th>
+                                                    <th style={{ padding: '1rem', textAlign: 'center' }}>Voted</th>
+                                                    <th style={{ padding: '1rem', textAlign: 'center' }}>Not Voted</th>
+                                                    <th style={{ padding: '1rem', textAlign: 'center' }}>Percentage</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {fronts.map(front => {
+                                                    const supporters = voters.filter(v => v.supported_front_id === front.id);
+                                                    const voted = supporters.filter(v => v.has_voted).length;
+                                                    const notVoted = supporters.length - voted;
+                                                    const percentage = supporters.length > 0 ? ((voted / supporters.length) * 100).toFixed(1) : 0;
+
+                                                    return (
+                                                        <tr key={front.id} style={{ borderBottom: '1px solid #eee' }}>
+                                                            <td style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: front.color || '#666' }}></div>
+                                                                <span style={{ fontWeight: '500' }}>{front.name}</span>
+                                                            </td>
+                                                            <td style={{ padding: '1rem', textAlign: 'center' }}>{supporters.length}</td>
+                                                            <td style={{ padding: '1rem', textAlign: 'center', color: '#10b981', fontWeight: 'bold' }}>{voted}</td>
+                                                            <td style={{ padding: '1rem', textAlign: 'center', color: '#ef4444' }}>{notVoted}</td>
+                                                            <td style={{ padding: '1rem', textAlign: 'center' }}>{percentage}%</td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                                <tr style={{ background: '#f8fafc', fontWeight: 'bold' }}>
+                                                    <td style={{ padding: '1rem' }}>Total</td>
+                                                    <td style={{ padding: '1rem', textAlign: 'center' }}>{voters.filter(v => v.supported_front_id).length}</td>
+                                                    <td style={{ padding: '1rem', textAlign: 'center', color: '#10b981' }}>{voters.filter(v => v.supported_front_id && v.has_voted).length}</td>
+                                                    <td style={{ padding: '1rem', textAlign: 'center', color: '#ef4444' }}>{voters.filter(v => v.supported_front_id && !v.has_voted).length}</td>
+                                                    <td style={{ padding: '1rem', textAlign: 'center' }}>-</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="report-content">
+                                        {fronts.map(front => {
+                                            const frontVoters = voters.filter(v => v.has_voted && v.supported_front_id === front.id);
+                                            if (frontVoters.length === 0) return null;
+
+                                            return (
+                                                <div key={front.id} style={{ marginBottom: '2rem' }}>
+                                                    <h4 style={{
+                                                        background: front.color ? `${front.color}20` : '#f3f4f6',
+                                                        color: front.color || '#333',
+                                                        padding: '0.75rem',
+                                                        borderRadius: '8px 8px 0 0',
+                                                        marginBottom: 0,
+                                                        borderLeft: `4px solid ${front.color || '#ccc'}`
+                                                    }}>
+                                                        {front.name} ({frontVoters.length})
+                                                    </h4>
+                                                    <div style={{ overflowX: 'auto' }}>
+                                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                                            <thead>
+                                                                <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #eee' }}>
+                                                                    <th style={{ padding: '0.75rem', textAlign: 'left', width: '60px' }}>Sl.No</th>
+                                                                    <th style={{ padding: '0.75rem', textAlign: 'left' }}>Name</th>
+                                                                    <th style={{ padding: '0.75rem', textAlign: 'left' }}>House Name</th>
+                                                                    <th style={{ padding: '0.75rem', textAlign: 'center', width: '80px' }}>Age</th>
+                                                                    <th style={{ padding: '0.75rem', textAlign: 'left', width: '150px' }}>Updated At</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {frontVoters.map((voter, idx) => (
+                                                                    <tr key={voter.id} style={{ borderBottom: '1px solid #eee' }}>
+                                                                        <td style={{ padding: '0.75rem' }}>{voter.sl_no}</td>
+                                                                        <td style={{ padding: '0.75rem', fontWeight: '500' }}>{voter.name}</td>
+                                                                        <td style={{ padding: '0.75rem', color: '#666' }}>{voter.house_name}</td>
+                                                                        <td style={{ padding: '0.75rem', textAlign: 'center' }}>{voter.age}</td>
+                                                                        <td style={{ padding: '0.75rem', fontSize: '0.85rem', color: '#666' }}>
+                                                                            {voter.updated_at ? new Date(voter.updated_at).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '-'}
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+
+                                        {/* Unverified/No Front but Voted - Should not theoretically happen if workflow is strict, but good to have */}
+                                        {(() => {
+                                            const otherVoters = voters.filter(v => v.has_voted && !v.supported_front_id);
+                                            if (otherVoters.length === 0) return null;
+                                            return (
+                                                <div style={{ marginBottom: '2rem' }}>
+                                                    <h4 style={{ background: '#f3f4f6', padding: '0.75rem', borderRadius: '8px 8px 0 0', marginBottom: 0, borderLeft: '4px solid #999' }}>
+                                                        മറ്റുള്ളവർ / Other ({otherVoters.length})
+                                                    </h4>
+                                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                                        <thead>
+                                                            <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #eee' }}>
+                                                                <th style={{ padding: '0.75rem', textAlign: 'left', width: '60px' }}>Sl.No</th>
+                                                                <th style={{ padding: '0.75rem', textAlign: 'left' }}>Name</th>
+                                                                <th style={{ padding: '0.75rem', textAlign: 'left' }}>House Name</th>
+                                                                <th style={{ padding: '0.75rem', textAlign: 'center', width: '80px' }}>Age</th>
+                                                                <th style={{ padding: '0.75rem', textAlign: 'left', width: '150px' }}>Updated At</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {otherVoters.map((voter, idx) => (
+                                                                <tr key={voter.id} style={{ borderBottom: '1px solid #eee' }}>
+                                                                    <td style={{ padding: '0.75rem' }}>{voter.sl_no}</td>
+                                                                    <td style={{ padding: '0.75rem', fontWeight: '500' }}>{voter.name}</td>
+                                                                    <td style={{ padding: '0.75rem', color: '#666' }}>{voter.house_name}</td>
+                                                                    <td style={{ padding: '0.75rem', textAlign: 'center' }}>{voter.age}</td>
+                                                                    <td style={{ padding: '0.75rem', fontSize: '0.85rem', color: '#666' }}>
+                                                                        {voter.updated_at ? new Date(voter.updated_at).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '-'}
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )
+                                        })()}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {activeTab === 'verification' && selectedBooth && (
                     <>
