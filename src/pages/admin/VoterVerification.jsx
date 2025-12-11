@@ -25,6 +25,7 @@ export default function VoteVerification() {
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [verificationFilter, setVerificationFilter] = useState('all');
+    const [voteStatusFilter, setVoteStatusFilter] = useState('all');
     const [isAtTop, setIsAtTop] = useState(true);
 
     const isWardMember = user?.role === 'ward_member';
@@ -108,7 +109,7 @@ export default function VoteVerification() {
         if (selectedPanchayat || (isWardMember && user?.ward_id)) {
             fetchStats();
         }
-    }, [selectedBooth, selectedWard, selectedPanchayat, activeTab]);
+    }, [selectedBooth, selectedWard, selectedPanchayat, activeTab, voteStatusFilter]);
 
     const fetchVoters = async () => {
         if (!selectedBooth) return;
@@ -160,6 +161,13 @@ export default function VoteVerification() {
                         return;
                     }
                 }
+            }
+
+            // Apply Vote Status Filter
+            if (voteStatusFilter === 'voted') {
+                query = query.eq('has_voted', true);
+            } else if (voteStatusFilter === 'not_voted') {
+                query = query.eq('has_voted', false);
             }
 
             const { data, error } = await query;
@@ -251,6 +259,10 @@ export default function VoteVerification() {
         // Verification Filter
         if (verificationFilter === 'verified' && !v.supported_front_id) return false;
         if (verificationFilter === 'not_verified' && v.supported_front_id) return false;
+
+        // Vote Status Filter
+        if (voteStatusFilter === 'voted' && !v.has_voted) return false;
+        if (voteStatusFilter === 'not_voted' && v.has_voted) return false;
 
         const lowerTerm = searchTerm.toLowerCase();
         return (
@@ -372,6 +384,24 @@ export default function VoteVerification() {
                                     <option value="not_verified">പരിശോധിക്കാത്തവ (Not Verified)</option>
                                 </select>
                             </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <Filter size={18} color="#666" />
+                                <select
+                                    value={voteStatusFilter}
+                                    onChange={e => setVoteStatusFilter(e.target.value)}
+                                    style={{
+                                        padding: '0.5rem',
+                                        borderRadius: '8px',
+                                        border: '1px solid #e2e8f0',
+                                        outline: 'none',
+                                        fontSize: '0.9rem'
+                                    }}
+                                >
+                                    <option value="all">വോട്ടർ നില (All Status)</option>
+                                    <option value="voted">വോട്ട് ചെയ്തവർ (Voted)</option>
+                                    <option value="not_voted">വോട്ട് ചെയ്യാത്തവർ (Will Vote)</option>
+                                </select>
+                            </div>
                         </div>
 
                         {loading ? <LoadingSpinner /> : (
@@ -456,6 +486,27 @@ export default function VoteVerification() {
                 {
                     activeTab === 'trend' && (
                         <div className="trend-section">
+                            <div className="card" style={{ padding: '1rem', marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span style={{ color: '#666', fontSize: '0.9rem' }}>Filter By:</span>
+                                    <select
+                                        value={voteStatusFilter}
+                                        onChange={e => setVoteStatusFilter(e.target.value)}
+                                        style={{
+                                            padding: '0.5rem',
+                                            borderRadius: '8px',
+                                            border: '1px solid #e2e8f0',
+                                            outline: 'none',
+                                            fontSize: '0.9rem'
+                                        }}
+                                    >
+                                        <option value="all">എല്ലാം (All Voters)</option>
+                                        <option value="voted">വോട്ട് ചെയ്തവർ (Voted)</option>
+                                        <option value="not_voted">വോട്ട് ചെയ്യാത്തവർ (Not Voted)</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             {loading ? <LoadingSpinner /> : stats ? (
                                 <div className="grid grid-2">
                                     {/* Summary Card */}
