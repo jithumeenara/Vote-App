@@ -2,22 +2,22 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Shield, Menu, X } from 'lucide-react';
 import Home from './pages/Home';
-import PanchayatList from './pages/PanchayatList';
-import WardList from './pages/WardList';
+import DistrictList from './pages/DistrictList';
+import ConstituencyList from './pages/ConstituencyList';
 import BoothList from './pages/BoothList';
 import VoterList from './pages/VoterList';
 
 // Admin Imports
 import AdminDashboard from './pages/admin/AdminDashboard';
-import AddPanchayat from './pages/admin/AddPanchayat';
-import AddWard from './pages/admin/AddWard';
+import AddDistrict from './pages/admin/AddDistrict';
+import AddConstituency from './pages/admin/AddConstituency';
 import AddBooth from './pages/admin/AddBooth';
 import AddCandidate from './pages/admin/AddCandidate';
 import UploadVoters from './pages/admin/UploadVoters';
 
 // Manage Imports
-import ManagePanchayats from './pages/admin/manage/ManagePanchayats';
-import ManageWards from './pages/admin/manage/ManageWards';
+import ManageDistricts from './pages/admin/manage/ManageDistricts';
+import ManageConstituencies from './pages/admin/manage/ManageConstituencies';
 import ManageBooths from './pages/admin/manage/ManageBooths';
 import ManageCandidates from './pages/admin/manage/ManageCandidates';
 import ManageVoters from './pages/admin/manage/ManageVoters';
@@ -75,9 +75,9 @@ function App() {
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/" element={<Home />} />
-              <Route path="/panchayats" element={<PanchayatList />} />
-              <Route path="/panchayat/:panchayatId" element={<WardList />} />
-              <Route path="/ward/:wardId" element={<BoothList />} />
+              <Route path="/districts" element={<DistrictList />} />
+              <Route path="/district/:districtId" element={<ConstituencyList />} />
+              <Route path="/constituency/:constituencyId" element={<BoothList />} />
               <Route path="/booth/:boothId" element={<VoterList />} />
 
               {/* Protected Admin Routes */}
@@ -86,14 +86,14 @@ function App() {
                   <AdminDashboard />
                 </ProtectedRoute>
               } />
-              <Route path="/admin/add-panchayat" element={
+              <Route path="/admin/add-district" element={
                 <ProtectedRoute>
-                  <AddPanchayat />
+                  <AddDistrict />
                 </ProtectedRoute>
               } />
-              <Route path="/admin/add-ward" element={
+              <Route path="/admin/add-constituency" element={
                 <ProtectedRoute>
-                  <AddWard />
+                  <AddConstituency />
                 </ProtectedRoute>
               } />
               <Route path="/admin/add-booth" element={
@@ -113,14 +113,14 @@ function App() {
               } />
 
               {/* Protected Manage Routes */}
-              <Route path="/admin/manage/panchayats" element={
+              <Route path="/admin/manage/districts" element={
                 <ProtectedRoute>
-                  <ManagePanchayats />
+                  <ManageDistricts />
                 </ProtectedRoute>
               } />
-              <Route path="/admin/manage/wards" element={
+              <Route path="/admin/manage/constituencies" element={
                 <ProtectedRoute>
-                  <ManageWards />
+                  <ManageConstituencies />
                 </ProtectedRoute>
               } />
               <Route path="/admin/manage/booths" element={

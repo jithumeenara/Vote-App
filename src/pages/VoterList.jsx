@@ -22,7 +22,7 @@ export default function VoterList() {
             // Fetch Booth Details
             const { data: bData } = await supabase
                 .from('booths')
-                .select('*, wards(name, ward_no, panchayats(name))')
+                .select('*, constituencies(name, constituency_no, districts(name))')
                 .eq('id', boothId)
                 .single();
             if (bData) setBoothDetails(bData);
@@ -106,7 +106,7 @@ export default function VoterList() {
                     boxShadow: '0 2px 4px rgba(55, 17, 32, 0.05)'
                 }}>
                     <MapPin size={14} />
-                    {boothDetails?.wards?.panchayats?.name} • വാർഡ് {boothDetails?.wards?.ward_no}
+                    {boothDetails?.constituencies?.districts?.name} • നിയോജക മണ്ഡലം {boothDetails?.constituencies?.constituency_no}
                 </div>
 
                 <h1 style={{

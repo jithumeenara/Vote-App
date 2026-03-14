@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
 import LoadingSpinner from '../../../components/LoadingSpinner';
-import { Plus, Trash2, User, MapPin, Save, X, Edit, Power } from 'lucide-react';
+import { Plus, Trash2, User, Save, X, Edit, Power } from 'lucide-react';
 import { useToast } from '../../../context/ToastContext';
 
 export default function ManageWardMembers() {
@@ -13,41 +13,40 @@ export default function ManageWardMembers() {
     // Form State
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [selectedPanchayat, setSelectedPanchayat] = useState('');
-    const [selectedWard, setSelectedWard] = useState('');
+    const [selectedDistrict, setSelectedDistrict] = useState('');
+    const [selectedConstituency, setSelectedConstituency] = useState('');
     const [creating, setCreating] = useState(false);
-    const [editingId, setEditingId] = useState(null); // Track if we are editing
+    const [editingId, setEditingId] = useState(null);
 
     // Dropdown Data
-    const [panchayats, setPanchayats] = useState([]);
-    const [wards, setWards] = useState([]);
+    const [districts, setDistricts] = useState([]);
+    const [constituencies, setConstituencies] = useState([]);
 
     useEffect(() => {
         fetchMembers();
-        fetchPanchayats();
+        fetchDistricts();
     }, []);
 
     useEffect(() => {
-        if (selectedPanchayat) {
-            fetchWards(selectedPanchayat);
+        if (selectedDistrict) {
+            fetchConstituencies(selectedDistrict);
         } else {
-            setWards([]);
+            setConstituencies([]);
         }
-    }, [selectedPanchayat]);
+    }, [selectedDistrict]);
 
     async function fetchMembers() {
         try {
-            // Fetch from custom ward_users table
             const { data, error } = await supabase
                 .from('ward_users')
                 .select(`
                     *,
-                    wards (
+                    constituencies (
                         id,
                         name,
-                        ward_no,
-                        panchayat_id,
-                        panchayats (
+                        constituency_no,
+                        district_id,
+                        districts (
                             id,
                             name
                         )
@@ -65,14 +64,14 @@ export default function ManageWardMembers() {
         }
     }
 
-    async function fetchPanchayats() {
-        const { data } = await supabase.from('panchayats').select('*').order('name');
-        setPanchayats(data || []);
+    async function fetchDistricts() {
+        const { data } = await supabase.from('districts').select('*').order('name');
+        setDistricts(data || []);
     }
 
-    async function fetchWards(panchayatId) {
-        const { data } = await supabase.from('wards').select('*').eq('panchayat_id', panchayatId).order('ward_no');
-        setWards(data || []);
+    async function fetchConstituencies(districtId) {
+        const { data } = await supabase.from('constituencies').select('*').eq('district_id', districtId).order('constituency_no');
+        setConstituencies(data || []);
     }
 
     function openCreateModal() {
@@ -83,12 +82,12 @@ export default function ManageWardMembers() {
 
     function openEditModal(member) {
         setEditingId(member.id);
-        setUsername(member.username); // Now we can show username!
+        setUsername(member.username);
         setPassword('');
 
         if (member.ward_id) {
-            setSelectedPanchayat(member.panchayat_id);
-            setSelectedWard(member.ward_id);
+            setSelectedDistrict(member.panchayat_id);
+            setSelectedConstituency(member.ward_id);
         }
 
         setIsModalOpen(true);
@@ -101,18 +100,16 @@ export default function ManageWardMembers() {
         try {
             if (editingId) {
                 // Update Existing Member
-                // 1. Update Ward Assignment
                 const { error: updateError } = await supabase
                     .from('ward_users')
                     .update({
-                        ward_id: selectedWard,
-                        panchayat_id: selectedPanchayat
+                        ward_id: selectedConstituency,
+                        panchayat_id: selectedDistrict
                     })
                     .eq('id', editingId);
 
                 if (updateError) throw updateError;
 
-                // 2. Update Password if provided
                 if (password) {
                     const { error: pwError } = await supabase.rpc('update_ward_user_password', {
                         user_id_input: editingId,
@@ -123,16 +120,16 @@ export default function ManageWardMembers() {
 
                 addToast('യൂസർ വിവരങ്ങൾ പുതുക്കി!', 'success');
             } else {
-                // Create New Member (Custom Table)
+                // Create New Member
                 const { data, error } = await supabase.rpc('create_custom_ward_user', {
                     username_input: username,
                     password_input: password,
-                    panchayat_id_input: selectedPanchayat,
-                    ward_id_input: selectedWard
+                    panchayat_id_input: selectedDistrict,
+                    ward_id_input: selectedConstituency
                 });
 
                 if (error) throw error;
-                addToast('വാർഡ് യൂസറെ വിജയകരമായി ചേർത്തു!', 'success');
+                addToast('നിയോജക മണ്ഡലം യൂസറെ വിജയകരമായി ചേർത്തു!', 'success');
             }
 
             setIsModalOpen(false);
@@ -159,7 +156,6 @@ export default function ManageWardMembers() {
 
             addToast(`യൂസർ ${newStatus ? 'സജീവമാക്കി' : 'നിർജ്ജീവമാക്കി'}`, 'success');
 
-            // Optimistic update
             setMembers(members.map(m =>
                 m.id === member.id ? { ...m, is_active: newStatus } : m
             ));
@@ -187,8 +183,8 @@ export default function ManageWardMembers() {
     function resetForm() {
         setUsername('');
         setPassword('');
-        setSelectedPanchayat('');
-        setSelectedWard('');
+        setSelectedDistrict('');
+        setSelectedConstituency('');
     }
 
     if (loading) return <LoadingSpinner />;
@@ -196,7 +192,7 @@ export default function ManageWardMembers() {
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <h2 style={{ color: 'var(--primary-bg)', margin: 0 }}>വാർഡ് യൂസർമാരെ നിയന്ത്രിക്കുക</h2>
+                <h2 style={{ color: 'var(--primary-bg)', margin: 0 }}>നിയോജക മണ്ഡലം യൂസർമാരെ നിയന്ത്രിക്കുക</h2>
                 <button
                     className="btn btn-primary"
                     onClick={openCreateModal}
@@ -229,10 +225,10 @@ export default function ManageWardMembers() {
                                     {member.is_active === false && <span style={{ fontSize: '0.7rem', background: '#fee2e2', color: '#ef4444', padding: '2px 6px', borderRadius: '4px', marginLeft: '8px' }}>Disabled</span>}
                                 </h4>
                                 <p style={{ margin: 0, color: 'var(--text-light)', fontSize: '0.9rem' }}>
-                                    {member.wards?.panchayats?.name}
+                                    {member.constituencies?.districts?.name}
                                 </p>
                                 <p style={{ margin: 0, color: 'var(--primary)', fontWeight: '600', fontSize: '0.9rem' }}>
-                                    വാർഡ്: {member.wards?.ward_no} - {member.wards?.name}
+                                    നിയോജക മണ്ഡലം: {member.constituencies?.constituency_no} - {member.constituencies?.name}
                                 </p>
                             </div>
                         </div>
@@ -281,7 +277,7 @@ export default function ManageWardMembers() {
                 <div className="modal-overlay">
                     <div className="modal-content" style={{ maxWidth: '500px' }}>
                         <div className="modal-header">
-                            <h3>{editingId ? 'യൂസറെ എഡിറ്റ് ചെയ്യുക' : 'പുതിയ വാർഡ് യൂസർ'}</h3>
+                            <h3>{editingId ? 'യൂസറെ എഡിറ്റ് ചെയ്യുക' : 'പുതിയ നിയോജക മണ്ഡലം യൂസർ'}</h3>
                             <button className="close-btn" onClick={() => setIsModalOpen(false)}>
                                 <X size={24} />
                             </button>
@@ -295,8 +291,8 @@ export default function ManageWardMembers() {
                                     value={username}
                                     onChange={e => setUsername(e.target.value)}
                                     required
-                                    placeholder="ഉദാ: ward1_user"
-                                    disabled={!!editingId} // Disable username editing
+                                    placeholder="ഉദാ: constituency1_user"
+                                    disabled={!!editingId}
                                 />
                                 {!editingId && <small style={{ color: '#666' }}>ലോഗിൻ ചെയ്യാൻ ഈ യൂസർനെയിം ഉപയോഗിക്കാം</small>}
                             </div>
@@ -315,31 +311,31 @@ export default function ManageWardMembers() {
                             </div>
 
                             <div className="form-group">
-                                <label className="label">പഞ്ചായത്ത്</label>
+                                <label className="label">ജില്ല</label>
                                 <select
                                     className="input"
-                                    value={selectedPanchayat}
-                                    onChange={e => setSelectedPanchayat(e.target.value)}
+                                    value={selectedDistrict}
+                                    onChange={e => setSelectedDistrict(e.target.value)}
                                     required
                                 >
                                     <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
-                                    {panchayats.map(p => (
-                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                    {districts.map(d => (
+                                        <option key={d.id} value={d.id}>{d.name}</option>
                                     ))}
                                 </select>
                             </div>
                             <div className="form-group">
-                                <label className="label">വാർഡ്</label>
+                                <label className="label">നിയോജക മണ്ഡലം</label>
                                 <select
                                     className="input"
-                                    value={selectedWard}
-                                    onChange={e => setSelectedWard(e.target.value)}
+                                    value={selectedConstituency}
+                                    onChange={e => setSelectedConstituency(e.target.value)}
                                     required
-                                    disabled={!selectedPanchayat}
+                                    disabled={!selectedDistrict}
                                 >
                                     <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
-                                    {wards.map(w => (
-                                        <option key={w.id} value={w.id}>{w.ward_no} - {w.name}</option>
+                                    {constituencies.map(c => (
+                                        <option key={c.id} value={c.id}>{c.constituency_no} - {c.name}</option>
                                     ))}
                                 </select>
                             </div>

@@ -16,12 +16,12 @@ export default function Home() {
             </p>
 
             <div className="grid grid-2" style={{ maxWidth: '800px', margin: '0 auto' }}>
-                <Link to="/panchayats" className="card" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                <Link to="/districts" className="card" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
                     <div style={{ background: '#fdf2f4', padding: '1.5rem', borderRadius: '50%', color: 'var(--primary)' }}>
                         <Search size={48} />
                     </div>
                     <h2>വോട്ടർ പട്ടിക തിരയുക</h2>
-                    <p style={{ color: 'var(--text-light)' }}>പഞ്ചായത്ത്, വാർഡ്, ബൂത്ത് എന്നിവ വഴി തിരയുക</p>
+                    <p style={{ color: 'var(--text-light)' }}>ജില്ല, നിയോജക മണ്ഡലം, ബൂത്ത് എന്നിവ വഴി തിരയുക</p>
                     <span className="btn btn-primary" style={{ width: '100%' }}>തിരയുക</span>
                 </Link>
 
@@ -30,7 +30,7 @@ export default function Home() {
                         <Database size={48} />
                     </div>
                     <h2>അഡ്മിൻ പോർട്ടൽ</h2>
-                    <p style={{ color: 'var(--text-light)' }}>പഞ്ചായത്ത്, വാർഡ്, ബൂത്ത്, വോട്ടർ വിവരങ്ങൾ ചേർക്കുക</p>
+                    <p style={{ color: 'var(--text-light)' }}>ജില്ല, നിയോജക മണ്ഡലം, ബൂത്ത്, വോട്ടർ വിവരങ്ങൾ ചേർക്കുക</p>
                     <span className="btn btn-secondary" style={{ width: '100%' }}>ലോഗിൻ ചെയ്യുക</span>
                 </Link>
             </div>

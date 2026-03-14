@@ -18,21 +18,21 @@ export default function AdminDashboard() {
         voted: 0,
         pending: 0
     });
-    const [wardName, setWardName] = useState('');
+    const [constituencyName, setConstituencyName] = useState('');
 
     const isWardMember = user?.role === 'ward_member';
 
     useEffect(() => {
         fetchStats();
         if (isWardMember && user?.ward_id) {
-            fetchWardName();
+            fetchConstituencyName();
         }
     }, [user]);
 
-    async function fetchWardName() {
-        const { data } = await supabase.from('wards').select('name, ward_no').eq('id', user.ward_id).single();
+    async function fetchConstituencyName() {
+        const { data } = await supabase.from('constituencies').select('name, constituency_no').eq('id', user.ward_id).single();
         if (data) {
-            setWardName(`${data.ward_no} - ${data.name}`);
+            setConstituencyName(`${data.constituency_no} - ${data.name}`);
         }
     }
 
@@ -45,7 +45,7 @@ export default function AdminDashboard() {
                 const { data: booths } = await supabase
                     .from('booths')
                     .select('id')
-                    .eq('ward_id', user.ward_id);
+                    .eq('constituency_id', user.ward_id);
 
                 if (booths) {
                     boothIds = booths.map(b => b.id);
@@ -106,7 +106,7 @@ export default function AdminDashboard() {
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h1 style={{ color: 'var(--primary-bg)', margin: 0 }}>
-                    {isWardMember ? (wardName ? `വാർഡ്: ${wardName}` : 'വാർഡ് മെമ്പർ ഡാഷ്‌ബോർഡ്') : 'അഡ്മിൻ ഡാഷ്‌ബോർഡ്'}
+                    {isWardMember ? (constituencyName ? `നിയോജക മണ്ഡലം: ${constituencyName}` : 'നിയോജക മണ്ഡലം മെമ്പർ ഡാഷ്‌ബോർഡ്') : 'അഡ്മിൻ ഡാഷ്‌ബോർഡ്'}
                 </h1>
 
                 <div style={{ display: 'flex', gap: '1rem' }}>
@@ -190,23 +190,23 @@ export default function AdminDashboard() {
             <div className="action-grid grid grid-2" style={{ marginBottom: '3rem' }}>
                 {!isWardMember && (
                     <>
-                        <Link to="/admin/add-panchayat" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <Link to="/admin/add-district" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                             <div style={{ background: '#dbeafe', padding: '1rem', borderRadius: '50%', color: 'var(--primary)' }}>
                                 <Map size={24} />
                             </div>
                             <div>
-                                <h3 style={{ marginBottom: '0.25rem' }}>പഞ്ചായത്ത് ചേർക്കുക</h3>
-                                <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>പുതിയ ഗ്രാമപഞ്ചായത്ത് സൃഷ്ടിക്കുക</p>
+                                <h3 style={{ marginBottom: '0.25rem' }}>ജില്ല ചേർക്കുക</h3>
+                                <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>പുതിയ ജില്ല സൃഷ്ടിക്കുക</p>
                             </div>
                         </Link>
 
-                        <Link to="/admin/add-ward" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <Link to="/admin/add-constituency" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                             <div style={{ background: '#dbeafe', padding: '1rem', borderRadius: '50%', color: 'var(--primary)' }}>
                                 <PlusCircle size={24} />
                             </div>
                             <div>
-                                <h3 style={{ marginBottom: '0.25rem' }}>വാർഡ് ചേർക്കുക</h3>
-                                <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>പഞ്ചായത്തുകളിൽ വാർഡുകൾ ചേർക്കുക</p>
+                                <h3 style={{ marginBottom: '0.25rem' }}>നിയോജക മണ്ഡലം ചേർക്കുക</h3>
+                                <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>ജില്ലകളിൽ നിയോജക മണ്ഡലങ്ങൾ ചേർക്കുക</p>
                             </div>
                         </Link>
                     </>
@@ -218,7 +218,7 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                         <h3 style={{ marginBottom: '0.25rem' }}>ബൂത്ത് ചേർക്കുക</h3>
-                        <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>വാർഡുകളിൽ ബൂത്തുകൾ സൃഷ്ടിക്കുക</p>
+                        <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>നിയോജക മണ്ഡലങ്ങളിൽ ബൂത്തുകൾ സൃഷ്ടിക്കുക</p>
                     </div>
                 </Link>
 
@@ -228,7 +228,7 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                         <h3 style={{ marginBottom: '0.25rem' }}>സ്ഥാനാർത്ഥിയെ ചേർക്കുക</h3>
-                        <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>വാർഡുകളിലേക്ക് സ്ഥാനാർത്ഥികളെ രജിസ്റ്റർ ചെയ്യുക</p>
+                        <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>നിയോജക മണ്ഡലങ്ങളിലേക്ക് സ്ഥാനാർത്ഥികളെ രജിസ്റ്റർ ചെയ്യുക</p>
                     </div>
                 </Link>
 
@@ -247,19 +247,19 @@ export default function AdminDashboard() {
             <div className="action-grid grid grid-2">
                 {!isWardMember && (
                     <>
-                        <Link to="/admin/manage/panchayats" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '4px solid var(--secondary)' }}>
+                        <Link to="/admin/manage/districts" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '4px solid var(--secondary)' }}>
                             <Settings size={24} color="var(--secondary)" />
                             <div>
-                                <h3 style={{ marginBottom: '0.25rem' }}>പഞ്ചായത്തുകൾ</h3>
-                                <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>പഞ്ചായത്തുകൾ എഡിറ്റ് / ഡിലീറ്റ് ചെയ്യുക</p>
+                                <h3 style={{ marginBottom: '0.25rem' }}>ജില്ലകൾ</h3>
+                                <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>ജില്ലകൾ എഡിറ്റ് / ഡിലീറ്റ് ചെയ്യുക</p>
                             </div>
                         </Link>
 
-                        <Link to="/admin/manage/wards" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '4px solid var(--secondary)' }}>
+                        <Link to="/admin/manage/constituencies" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '4px solid var(--secondary)' }}>
                             <Settings size={24} color="var(--secondary)" />
                             <div>
-                                <h3 style={{ marginBottom: '0.25rem' }}>വാർഡുകൾ</h3>
-                                <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>വാർഡുകൾ എഡിറ്റ് / ഡിലീറ്റ് ചെയ്യുക</p>
+                                <h3 style={{ marginBottom: '0.25rem' }}>നിയോജക മണ്ഡലങ്ങൾ</h3>
+                                <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>നിയോജക മണ്ഡലങ്ങൾ എഡിറ്റ് / ഡിലീറ്റ് ചെയ്യുക</p>
                             </div>
                         </Link>
                     </>
@@ -302,7 +302,7 @@ export default function AdminDashboard() {
                         <Link to="/admin/manage/members" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '4px solid var(--secondary)' }}>
                             <Users size={24} color="var(--secondary)" />
                             <div>
-                                <h3 style={{ marginBottom: '0.25rem' }}>വാർഡ് യൂസർ</h3>
+                                <h3 style={{ marginBottom: '0.25rem' }}>നിയോജക മണ്ഡലം യൂസർ</h3>
                                 <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>യൂസർമാരെ ചേർക്കുക / നിയന്ത്രിക്കുക</p>
                             </div>
                         </Link>

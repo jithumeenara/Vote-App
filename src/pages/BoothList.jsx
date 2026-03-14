@@ -5,27 +5,27 @@ import { ChevronRight, ChevronDown, Users, Vote } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function BoothList() {
-    const { wardId } = useParams();
+    const { constituencyId } = useParams();
     const [booths, setBooths] = useState([]);
     const [candidates, setCandidates] = useState([]);
-    const [wardDetails, setWardDetails] = useState(null);
+    const [constituencyDetails, setConstituencyDetails] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetchData();
-    }, [wardId]);
+    }, [constituencyId]);
 
     async function fetchData() {
         try {
-            // Fetch Ward Details
-            const { data: wData } = await supabase.from('wards').select('*, panchayats(name)').eq('id', wardId).single();
-            if (wData) setWardDetails(wData);
+            // Fetch Constituency Details
+            const { data: wData } = await supabase.from('constituencies').select('*, districts(name)').eq('id', constituencyId).single();
+            if (wData) setConstituencyDetails(wData);
 
             // Fetch Booths
             const { data: bData } = await supabase
                 .from('booths')
                 .select('*')
-                .eq('ward_id', wardId)
+                .eq('constituency_id', constituencyId)
                 .order('booth_no');
             setBooths(bData || []);
 
@@ -33,7 +33,7 @@ export default function BoothList() {
             const { data: cData } = await supabase
                 .from('candidates')
                 .select('*')
-                .eq('ward_id', wardId);
+                .eq('constituency_id', constituencyId);
             setCandidates(cData || []);
 
         } catch (error) {
@@ -49,9 +49,9 @@ export default function BoothList() {
         <div>
             <div style={{ marginBottom: '2rem' }}>
                 <span style={{ color: 'var(--text-light)', fontSize: '1rem' }}>
-                    {wardDetails?.panchayats?.name} / വാർഡ് {wardDetails?.ward_no}
+                    {constituencyDetails?.districts?.name} / നിയോജക മണ്ഡലം {constituencyDetails?.constituency_no}
                 </span>
-                <h1 style={{ color: 'var(--primary-bg)' }}>{wardDetails?.name}</h1>
+                <h1 style={{ color: 'var(--primary-bg)' }}>{constituencyDetails?.name}</h1>
             </div>
 
             {/* Scroll Down Indicator */}
@@ -93,7 +93,7 @@ export default function BoothList() {
                                     {candidate.quote || 'ചുറ്റിക അരിവാൾ നക്ഷത്രം'}
                                 </div>
                                 <div className="front-badge-container">
-                                    <div className="ward-badge-text">{wardDetails?.name} വാർഡ്</div>
+                                    <div className="ward-badge-text">{constituencyDetails?.name} നിയോജക മണ്ഡലം</div>
                                     <div className="front-name">{candidate.front}</div>
                                     <div className="candidate-label">സ്ഥാനാർത്ഥി</div>
                                 </div>
@@ -124,8 +124,6 @@ export default function BoothList() {
                 </div>
             </section>
 
-
-
             {/* Booths Section */}
             <section id="booths-section">
                 <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text)' }}>
@@ -148,7 +146,7 @@ export default function BoothList() {
                 </div>
                 {booths.length === 0 && (
                     <div style={{ textAlign: 'center', color: 'var(--text-light)', padding: '2rem' }}>
-                        ഈ വാർഡിൽ ബൂത്തുകളൊന്നും കണ്ടെത്തിയില്ല.
+                        ഈ നിയോജക മണ്ഡലത്തിൽ ബൂത്തുകളൊന്നും കണ്ടെത്തിയില്ല.
                     </div>
                 )}
             </section>
