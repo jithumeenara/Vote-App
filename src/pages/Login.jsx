@@ -67,7 +67,7 @@ export default function Login() {
                         <Lock color="white" size={30} />
                     </div>
                     <h2 style={{ color: 'var(--primary-bg)' }}>
-                        {loginType === 'admin' ? 'അഡ്മിൻ ലോഗിൻ' : 'വാർഡ് ലോഗിൻ'}
+                        {loginType === 'admin' ? 'അഡ്മിൻ ലോഗിൻ' : 'നിയോജക മണ്ഡലം ലോഗിൻ'}
                     </h2>
                     <p style={{ color: 'var(--text-light)' }}>തുടരാൻ ദയവായി ലോഗിൻ ചെയ്യുക</p>
                 </div>
@@ -93,7 +93,7 @@ export default function Login() {
                             onChange={() => setLoginType('ward')}
                             style={{ display: 'none' }}
                         />
-                        <span>Ward</span>
+                        <span>Constituency</span>
                     </label>
                     <label style={{
                         display: 'flex',

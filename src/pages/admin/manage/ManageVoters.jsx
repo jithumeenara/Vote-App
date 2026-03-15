@@ -84,6 +84,25 @@ export default function ManageVoters() {
         }
     }, [selectedBooth]);
 
+    // Real-time sync: re-fetch when any voter in this booth changes
+    useEffect(() => {
+        if (!selectedBooth) return;
+
+        const channel = supabase
+            .channel(`voters-booth-${selectedBooth}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'voters',
+                filter: `booth_id=eq.${selectedBooth}`
+            }, () => {
+                fetchVoters(selectedBooth);
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, [selectedBooth]);
+
     async function fetchDistricts() {
         const { data } = await supabase.from('districts').select('*').order('name');
         setDistricts(data || []);
@@ -381,27 +400,27 @@ export default function ManageVoters() {
                                 <div className="grid grid-2" style={{ gap: '1rem' }}>
                                     <div className="form-group">
                                         <label className="label">ക്രമനമ്പർ</label>
-                                        <input className="input" type="number" value={editData.sl_no} onChange={e => setEditData({ ...editData, sl_no: e.target.value })} />
+                                        <input className="input" type="number" value={editData.sl_no ?? ''} onChange={e => setEditData({ ...editData, sl_no: e.target.value })} />
                                     </div>
                                     <div className="form-group">
                                         <label className="label">പേര്</label>
-                                        <input className="input" value={editData.name} onChange={e => setEditData({ ...editData, name: e.target.value })} />
+                                        <input className="input" value={editData.name ?? ''} onChange={e => setEditData({ ...editData, name: e.target.value })} />
                                     </div>
                                     <div className="form-group">
                                         <label className="label">രക്ഷിതാവ്</label>
-                                        <input className="input" value={editData.guardian_name} onChange={e => setEditData({ ...editData, guardian_name: e.target.value })} />
+                                        <input className="input" value={editData.guardian_name ?? ''} onChange={e => setEditData({ ...editData, guardian_name: e.target.value })} />
                                     </div>
                                     <div className="form-group">
                                         <label className="label">വീട്ടുപേര്</label>
-                                        <input className="input" value={editData.house_name} onChange={e => setEditData({ ...editData, house_name: e.target.value })} />
+                                        <input className="input" value={editData.house_name ?? ''} onChange={e => setEditData({ ...editData, house_name: e.target.value })} />
                                     </div>
                                     <div className="form-group">
                                         <label className="label">ഐഡി കാർഡ്</label>
-                                        <input className="input" value={editData.id_card_no} onChange={e => setEditData({ ...editData, id_card_no: e.target.value })} />
+                                        <input className="input" value={editData.id_card_no ?? ''} onChange={e => setEditData({ ...editData, id_card_no: e.target.value })} />
                                     </div>
                                     <div className="form-group">
                                         <label className="label">വയസ്സ്</label>
-                                        <input className="input" type="number" value={editData.age} onChange={e => setEditData({ ...editData, age: e.target.value })} />
+                                        <input className="input" type="number" value={editData.age ?? ''} onChange={e => setEditData({ ...editData, age: e.target.value })} />
                                     </div>
                                     <div className="form-group">
                                         <label className="label">അവസ്ഥ (Status)</label>

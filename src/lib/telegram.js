@@ -95,9 +95,9 @@ export const TelegramAlerts = {
 
     newData: (type, details) => `📝 <b>New Data Added</b>\nType: ${type}\nDetails: ${details}\nTime: ${new Date().toLocaleString('en-IN')}`,
 
-    voteMarked: (voterName, slNo, panchayat, ward, booth) => {
-        const wardEmoji = getWardEmoji(ward);
-        return `${wardEmoji} <b>Vote Marked</b>\n\n👤 Voter: ${voterName} (Sl.No: ${slNo})\n📍 Panchayat: ${panchayat}\n${wardEmoji} Ward: ${ward}\n🗳️ Booth: ${booth}\n🕒 Time: ${new Date().toLocaleString('en-IN')}`;
+    voteMarked: (voterName, slNo, district, constituency, booth) => {
+        const wardEmoji = getWardEmoji(constituency);
+        return `${wardEmoji} <b>Vote Marked</b>\n\n👤 Voter: ${voterName} (Sl.No: ${slNo})\n📍 District: ${district}\n${wardEmoji} Constituency: ${constituency}\n🗳️ Booth: ${booth}\n🕒 Time: ${new Date().toLocaleString('en-IN')}`;
     },
 
     aiQuery: (user, question) => `🤖 <b>AI Assistant Query</b>\nUser: ${user}\nQuestion: "${question}"\nTime: ${new Date().toLocaleString('en-IN')}`

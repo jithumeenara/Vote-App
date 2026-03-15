@@ -6,12 +6,12 @@ import { ArrowUp, ArrowDown, Users, UserCheck, UserX, UserMinus, AlertTriangle, 
 
 export default function Reports() {
     const { user } = useAuth();
-    const [panchayats, setPanchayats] = useState([]);
-    const [wards, setWards] = useState([]);
+    const [districts, setDistricts] = useState([]);
+    const [constituencies, setConstituencies] = useState([]);
     const [booths, setBooths] = useState([]);
 
-    const [selectedPanchayat, setSelectedPanchayat] = useState('');
-    const [selectedWard, setSelectedWard] = useState('');
+    const [selectedDistrict, setSelectedDistrict] = useState('');
+    const [selectedConstituency, setSelectedConstituency] = useState('');
     const [selectedBooth, setSelectedBooth] = useState('');
 
     const [stats, setStats] = useState({
@@ -32,9 +32,9 @@ export default function Reports() {
     const isWardMember = user?.role === 'ward_member';
 
     useEffect(() => {
-        fetchPanchayats();
+        fetchDistricts();
         if (isWardMember && user?.ward_id) {
-            fetchUserWardDetails();
+            fetchUserConstituencyDetails();
         } else {
             fetchStats(); // Initial fetch for admin (all voters)
         }
@@ -55,58 +55,72 @@ export default function Reports() {
         }
     };
 
-    async function fetchUserWardDetails() {
+    async function fetchUserConstituencyDetails() {
         const { data } = await supabase
-            .from('wards')
-            .select('id, panchayat_id')
+            .from('constituencies')
+            .select('id, district_id')
             .eq('id', user.ward_id)
             .single();
 
         if (data) {
-            setSelectedPanchayat(data.panchayat_id);
-            setSelectedWard(data.id);
-            // fetchStats will be triggered by the useEffect dependencies on selectedPanchayat/selectedWard
+            setSelectedDistrict(data.district_id);
+            setSelectedConstituency(data.id);
         }
     }
 
     useEffect(() => {
-        if (selectedPanchayat) {
-            fetchWards(selectedPanchayat);
+        if (selectedDistrict) {
+            fetchConstituencies(selectedDistrict);
         } else {
-            setWards([]);
+            setConstituencies([]);
             setBooths([]);
         }
-        // Only fetch stats if not ward member (to avoid double fetch on initial load) 
-        // OR if we want to support filtering.
-        // For ward member, selectedWard will be set shortly, triggering the next effect.
         if (!isWardMember) fetchStats();
-    }, [selectedPanchayat]);
+    }, [selectedDistrict]);
 
     useEffect(() => {
-        if (selectedWard) {
-            fetchBooths(selectedWard);
+        if (selectedConstituency) {
+            fetchBooths(selectedConstituency);
         } else {
             setBooths([]);
         }
         fetchStats();
-    }, [selectedWard]);
+    }, [selectedConstituency]);
 
     useEffect(() => {
         fetchStats();
     }, [selectedBooth]);
 
-    async function fetchPanchayats() {
-        const { data } = await supabase.from('panchayats').select('*').order('name');
-        setPanchayats(data || []);
+    // Real-time: auto-refresh stats when votes change
+    useEffect(() => {
+        if (!selectedConstituency && !selectedBooth && !selectedDistrict) return;
+
+        const channel = supabase
+            .channel(`reports-realtime-${selectedBooth || selectedConstituency || selectedDistrict}`)
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'voters'
+            }, () => {
+                fetchStats();
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, [selectedBooth, selectedConstituency, selectedDistrict]);
+
+    async function fetchDistricts() {
+        const { data } = await supabase.from('districts').select('*').order('name');
+        setDistricts(data || []);
     }
 
-    async function fetchWards(panchayatId) {
-        const { data } = await supabase.from('wards').select('*').eq('panchayat_id', panchayatId).order('ward_no');
-        setWards(data || []);
+    async function fetchConstituencies(districtId) {
+        const { data } = await supabase.from('constituencies').select('*').eq('district_id', districtId).order('constituency_no');
+        setConstituencies(data || []);
     }
 
-    async function fetchBooths(wardId) {
-        const { data } = await supabase.from('booths').select('*').eq('ward_id', wardId).order('booth_no');
+    async function fetchBooths(constituencyId) {
+        const { data } = await supabase.from('booths').select('*').eq('constituency_id', constituencyId).order('booth_no');
         setBooths(data || []);
     }
 
@@ -116,18 +130,16 @@ export default function Reports() {
             const applyFilters = (query) => {
                 if (selectedBooth) {
                     return query.eq('booth_id', selectedBooth);
-                } else if (selectedWard) {
-                    return query.eq('booths.ward_id', selectedWard);
-                } else if (selectedPanchayat) {
-                    return query.eq('booths.wards.panchayat_id', selectedPanchayat);
+                } else if (selectedConstituency) {
+                    return query.eq('booths.constituency_id', selectedConstituency);
+                } else if (selectedDistrict) {
+                    return query.eq('booths.constituencies.district_id', selectedDistrict);
                 }
                 return query;
             };
 
             const runCountQuery = async (filterFn) => {
-                // We need to join tables if filtering by ward/panchayat
-                // Note: We use !inner join to ensure we can filter by related tables
-                let query = supabase.from('voters').select('booths!inner(ward_id, wards!inner(panchayat_id))', { count: 'exact', head: true });
+                let query = supabase.from('voters').select('booths!inner(constituency_id, constituencies!inner(district_id))', { count: 'exact', head: true });
 
                 query = applyFilters(query);
                 if (filterFn) query = filterFn(query);
@@ -177,38 +189,38 @@ export default function Reports() {
 
                 <div className="grid grid-3" style={{ marginBottom: '2rem' }}>
                     <div className="form-group">
-                        <label className="label">പഞ്ചായത്ത്</label>
+                        <label className="label">ജില്ല</label>
                         <select
                             className="input"
-                            value={selectedPanchayat}
+                            value={selectedDistrict}
                             onChange={e => {
-                                setSelectedPanchayat(e.target.value);
-                                setSelectedWard('');
+                                setSelectedDistrict(e.target.value);
+                                setSelectedConstituency('');
                                 setSelectedBooth('');
                             }}
                             disabled={isWardMember}
                         >
                             <option value="">-- എല്ലാം --</option>
-                            {panchayats.map(p => (
-                                <option key={p.id} value={p.id}>{p.name}</option>
+                            {districts.map(d => (
+                                <option key={d.id} value={d.id}>{d.name}</option>
                             ))}
                         </select>
                     </div>
 
                     <div className="form-group">
-                        <label className="label">വാർഡ്</label>
+                        <label className="label">നിയോജക മണ്ഡലം</label>
                         <select
                             className="input"
-                            value={selectedWard}
+                            value={selectedConstituency}
                             onChange={e => {
-                                setSelectedWard(e.target.value);
+                                setSelectedConstituency(e.target.value);
                                 setSelectedBooth('');
                             }}
-                            disabled={!selectedPanchayat || isWardMember}
+                            disabled={!selectedDistrict || isWardMember}
                         >
                             <option value="">-- എല്ലാം --</option>
-                            {wards.map(w => (
-                                <option key={w.id} value={w.id}>{w.ward_no} - {w.name}</option>
+                            {constituencies.map(c => (
+                                <option key={c.id} value={c.id}>{c.constituency_no} - {c.name}</option>
                             ))}
                         </select>
                     </div>
@@ -219,7 +231,7 @@ export default function Reports() {
                             className="input"
                             value={selectedBooth}
                             onChange={e => setSelectedBooth(e.target.value)}
-                            disabled={!selectedWard}
+                            disabled={!selectedConstituency}
                         >
                             <option value="">-- എല്ലാം --</option>
                             {booths.map(b => (

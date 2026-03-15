@@ -6,10 +6,10 @@ import ConfirmModal from '../../../components/ConfirmModal';
 import { useAuth } from '../../../context/AuthContext';
 
 export default function ManageCandidates() {
-    const [panchayats, setPanchayats] = useState([]);
-    const [wards, setWards] = useState([]);
-    const [selectedPanchayat, setSelectedPanchayat] = useState('');
-    const [selectedWard, setSelectedWard] = useState('');
+    const [districts, setDistricts] = useState([]);
+    const [constituencies, setConstituencies] = useState([]);
+    const [selectedDistrict, setSelectedDistrict] = useState('');
+    const [selectedConstituency, setSelectedConstituency] = useState('');
     const [candidates, setCandidates] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -28,55 +28,55 @@ export default function ManageCandidates() {
     const isWardMember = user?.role === 'ward_member';
 
     useEffect(() => {
-        fetchPanchayats();
+        fetchDistricts();
         if (isWardMember && user?.ward_id) {
-            fetchUserWardDetails();
+            fetchUserConstituencyDetails();
         }
     }, [user]);
 
-    async function fetchUserWardDetails() {
+    async function fetchUserConstituencyDetails() {
         const { data } = await supabase
-            .from('wards')
-            .select('id, panchayat_id')
+            .from('constituencies')
+            .select('id, district_id')
             .eq('id', user.ward_id)
             .single();
 
         if (data) {
-            setSelectedPanchayat(data.panchayat_id);
-            setSelectedWard(data.id);
+            setSelectedDistrict(data.district_id);
+            setSelectedConstituency(data.id);
         }
     }
 
     useEffect(() => {
-        if (selectedPanchayat) {
-            fetchWards(selectedPanchayat);
+        if (selectedDistrict) {
+            fetchConstituencies(selectedDistrict);
         } else {
-            setWards([]);
+            setConstituencies([]);
             setCandidates([]);
         }
-    }, [selectedPanchayat]);
+    }, [selectedDistrict]);
 
     useEffect(() => {
-        if (selectedWard) {
-            fetchCandidates(selectedWard);
+        if (selectedConstituency) {
+            fetchCandidates(selectedConstituency);
         } else {
             setCandidates([]);
         }
-    }, [selectedWard]);
+    }, [selectedConstituency]);
 
-    async function fetchPanchayats() {
-        const { data } = await supabase.from('panchayats').select('*').order('name');
-        setPanchayats(data || []);
+    async function fetchDistricts() {
+        const { data } = await supabase.from('districts').select('*').order('name');
+        setDistricts(data || []);
     }
 
-    async function fetchWards(panchayatId) {
-        const { data } = await supabase.from('wards').select('*').eq('panchayat_id', panchayatId).order('ward_no');
-        setWards(data || []);
+    async function fetchConstituencies(districtId) {
+        const { data } = await supabase.from('constituencies').select('*').eq('district_id', districtId).order('constituency_no');
+        setConstituencies(data || []);
     }
 
-    async function fetchCandidates(wardId) {
+    async function fetchCandidates(constituencyId) {
         setLoading(true);
-        const { data } = await supabase.from('candidates').select('*').eq('ward_id', wardId);
+        const { data } = await supabase.from('candidates').select('*').eq('constituency_id', constituencyId);
         setCandidates(data || []);
         setLoading(false);
     }
@@ -137,9 +137,6 @@ export default function ManageCandidates() {
     }
 
     async function saveEdit(id) {
-        let photoUrl = editPhotoPreview;
-        let symbolUrl = editSymbolPreview;
-
         const updates = {
             name: editName,
             front: editFront,
@@ -164,31 +161,31 @@ export default function ManageCandidates() {
 
             <div className="grid grid-2" style={{ marginBottom: '2rem' }}>
                 <div className="form-group">
-                    <label className="label">പഞ്ചായത്ത് തിരഞ്ഞെടുക്കുക</label>
+                    <label className="label">ജില്ല തിരഞ്ഞെടുക്കുക</label>
                     <select
                         className="input"
-                        value={selectedPanchayat}
-                        onChange={e => setSelectedPanchayat(e.target.value)}
+                        value={selectedDistrict}
+                        onChange={e => setSelectedDistrict(e.target.value)}
                         disabled={isWardMember}
                     >
                         <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
-                        {panchayats.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
+                        {districts.map(d => (
+                            <option key={d.id} value={d.id}>{d.name}</option>
                         ))}
                     </select>
                 </div>
 
                 <div className="form-group">
-                    <label className="label">വാർഡ് തിരഞ്ഞെടുക്കുക</label>
+                    <label className="label">നിയോജക മണ്ഡലം തിരഞ്ഞെടുക്കുക</label>
                     <select
                         className="input"
-                        value={selectedWard}
-                        onChange={e => setSelectedWard(e.target.value)}
-                        disabled={!selectedPanchayat || isWardMember}
+                        value={selectedConstituency}
+                        onChange={e => setSelectedConstituency(e.target.value)}
+                        disabled={!selectedDistrict || isWardMember}
                     >
                         <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
-                        {wards.map(w => (
-                            <option key={w.id} value={w.id}>{w.ward_no} - {w.name}</option>
+                        {constituencies.map(c => (
+                            <option key={c.id} value={c.id}>{c.constituency_no} - {c.name}</option>
                         ))}
                     </select>
                 </div>
@@ -322,7 +319,7 @@ export default function ManageCandidates() {
                             )}
                         </div>
                     ))}
-                    {selectedWard && candidates.length === 0 && (
+                    {selectedConstituency && candidates.length === 0 && (
                         <div style={{ color: 'var(--text-light)' }}>സ്ഥാനാർത്ഥികളെ കണ്ടെത്തിയില്ല.</div>
                     )}
                 </div>

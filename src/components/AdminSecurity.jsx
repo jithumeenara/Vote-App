@@ -11,13 +11,16 @@ export default function AdminSecurity() {
         if (user) {
             const path = location.pathname;
 
-            // Check if the user is navigating AWAY from admin pages
-            // We allow /admin* and /login
-            // If they go to /, /panchayats, etc., we log them out.
             const isAdminPath = path.startsWith('/admin');
             const isLoginPath = path === '/login';
+            const isPublicPath = path === '/' ||
+                path.startsWith('/districts') ||
+                path.startsWith('/district') ||
+                path.startsWith('/constituency') ||
+                path.startsWith('/booth') ||
+                path.startsWith('/voters');
 
-            if (!isAdminPath && !isLoginPath) {
+            if (!isAdminPath && !isLoginPath && !isPublicPath) {
                 console.log('User navigated away from admin area. Logging out...');
                 signOut();
             }

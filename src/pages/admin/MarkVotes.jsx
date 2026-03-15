@@ -10,12 +10,12 @@ export default function MarkVotes() {
     const { user } = useAuth();
     const { addToast } = useToast();
 
-    const [panchayats, setPanchayats] = useState([]);
-    const [wards, setWards] = useState([]);
+    const [districts, setDistricts] = useState([]);
+    const [constituencies, setConstituencies] = useState([]);
     const [booths, setBooths] = useState([]);
 
-    const [selectedPanchayat, setSelectedPanchayat] = useState('');
-    const [selectedWard, setSelectedWard] = useState('');
+    const [selectedDistrict, setSelectedDistrict] = useState('');
+    const [selectedConstituency, setSelectedConstituency] = useState('');
     const [selectedBooth, setSelectedBooth] = useState('');
 
     const [voters, setVoters] = useState([]);
@@ -28,59 +28,59 @@ export default function MarkVotes() {
 
     const isWardMember = user?.role === 'ward_member';
 
-    // Fetch Panchayats
+    // Fetch Districts
     useEffect(() => {
-        fetchPanchayats();
+        fetchDistricts();
     }, []);
 
-    const fetchPanchayats = async () => {
+    const fetchDistricts = async () => {
         try {
-            const { data, error } = await supabase.from('panchayats').select('*').order('name');
+            const { data, error } = await supabase.from('districts').select('*').order('name');
             if (error) throw error;
-            setPanchayats(data);
+            setDistricts(data);
         } catch (error) {
-            console.error('Error fetching panchayats:', error);
+            console.error('Error fetching districts:', error);
         }
     };
 
-    // Fetch Wards
+    // Fetch Constituencies
     useEffect(() => {
-        if (selectedPanchayat) {
-            fetchWards(selectedPanchayat);
+        if (selectedDistrict) {
+            fetchConstituencies(selectedDistrict);
         } else {
-            setWards([]);
+            setConstituencies([]);
         }
-    }, [selectedPanchayat]);
+    }, [selectedDistrict]);
 
-    const fetchWards = async (panchayatId) => {
+    const fetchConstituencies = async (districtId) => {
         try {
             const { data, error } = await supabase
-                .from('wards')
+                .from('constituencies')
                 .select('*')
-                .eq('panchayat_id', panchayatId)
-                .order('ward_no');
+                .eq('district_id', districtId)
+                .order('constituency_no');
             if (error) throw error;
-            setWards(data);
+            setConstituencies(data);
         } catch (error) {
-            console.error('Error fetching wards:', error);
+            console.error('Error fetching constituencies:', error);
         }
     };
 
     // Fetch Booths
     useEffect(() => {
-        if (selectedWard) {
-            fetchBooths(selectedWard);
+        if (selectedConstituency) {
+            fetchBooths(selectedConstituency);
         } else {
             setBooths([]);
         }
-    }, [selectedWard]);
+    }, [selectedConstituency]);
 
-    const fetchBooths = async (wardId) => {
+    const fetchBooths = async (constituencyId) => {
         try {
             const { data, error } = await supabase
                 .from('booths')
                 .select('*')
-                .eq('ward_id', wardId)
+                .eq('constituency_id', constituencyId)
                 .order('booth_no');
             if (error) throw error;
             setBooths(data);
@@ -92,14 +92,14 @@ export default function MarkVotes() {
     // Ward Member Pre-selection
     useEffect(() => {
         if (isWardMember && user?.ward_id) {
-            const fetchWardDetails = async () => {
-                const { data } = await supabase.from('wards').select('*, panchayats(*)').eq('id', user.ward_id).single();
+            const fetchConstituencyDetails = async () => {
+                const { data } = await supabase.from('constituencies').select('*, districts(*)').eq('id', user.ward_id).single();
                 if (data) {
-                    setSelectedPanchayat(data.panchayat_id);
-                    setSelectedWard(data.id);
+                    setSelectedDistrict(data.district_id);
+                    setSelectedConstituency(data.id);
                 }
             };
-            fetchWardDetails();
+            fetchConstituencyDetails();
         }
     }, [isWardMember, user]);
 
@@ -179,16 +179,16 @@ export default function MarkVotes() {
             if (error) throw error;
 
             // Send Telegram Alert
-            const ward = wards.find(w => w.id === selectedWard);
-            const wardName = ward ? `${ward.ward_no} - ${ward.name}` : 'Unknown Ward';
+            const constituency = constituencies.find(c => c.id === selectedConstituency);
+            const constituencyName = constituency ? `${constituency.constituency_no} - ${constituency.name}` : 'Unknown Constituency';
 
-            const panchayat = panchayats.find(p => p.id === selectedPanchayat);
-            const panchayatName = panchayat ? panchayat.name : 'Unknown Panchayat';
+            const district = districts.find(d => d.id === selectedDistrict);
+            const districtName = district ? district.name : 'Unknown District';
 
             const booth = booths.find(b => b.id === selectedBooth);
             const boothName = booth ? `${booth.booth_no} - ${booth.name}` : 'Unknown Booth';
 
-            sendTelegramAlert(TelegramAlerts.voteMarked(confirmingVoter.name, confirmingVoter.sl_no, panchayatName, wardName, boothName));
+            sendTelegramAlert(TelegramAlerts.voteMarked(confirmingVoter.name, confirmingVoter.sl_no, districtName, constituencyName, boothName));
 
         } catch (error) {
             console.error('Error marking vote:', error);
@@ -225,38 +225,38 @@ export default function MarkVotes() {
             <div className="card" style={{ marginBottom: '2rem', padding: '1.5rem' }}>
                 <div className="responsive-grid">
                     <div className="form-group">
-                        <label className="label">പഞ്ചായത്ത്</label>
+                        <label className="label">ജില്ല</label>
                         <select
                             className="input"
-                            value={selectedPanchayat}
+                            value={selectedDistrict}
                             onChange={e => {
-                                setSelectedPanchayat(e.target.value);
-                                setSelectedWard('');
+                                setSelectedDistrict(e.target.value);
+                                setSelectedConstituency('');
                                 setSelectedBooth('');
                             }}
                             disabled={isWardMember}
                         >
                             <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
-                            {panchayats.map(p => (
-                                <option key={p.id} value={p.id}>{p.name}</option>
+                            {districts.map(d => (
+                                <option key={d.id} value={d.id}>{d.name}</option>
                             ))}
                         </select>
                     </div>
 
                     <div className="form-group">
-                        <label className="label">വാർഡ്</label>
+                        <label className="label">നിയോജക മണ്ഡലം</label>
                         <select
                             className="input"
-                            value={selectedWard}
+                            value={selectedConstituency}
                             onChange={e => {
-                                setSelectedWard(e.target.value);
+                                setSelectedConstituency(e.target.value);
                                 setSelectedBooth('');
                             }}
-                            disabled={!selectedPanchayat || isWardMember}
+                            disabled={!selectedDistrict || isWardMember}
                         >
                             <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
-                            {wards.map(w => (
-                                <option key={w.id} value={w.id}>{w.ward_no} - {w.name}</option>
+                            {constituencies.map(c => (
+                                <option key={c.id} value={c.id}>{c.constituency_no} - {c.name}</option>
                             ))}
                         </select>
                     </div>
@@ -267,7 +267,7 @@ export default function MarkVotes() {
                             className="input"
                             value={selectedBooth}
                             onChange={e => setSelectedBooth(e.target.value)}
-                            disabled={!selectedWard}
+                            disabled={!selectedConstituency}
                         >
                             <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
                             {booths.map(b => (

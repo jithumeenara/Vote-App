@@ -96,10 +96,10 @@ You are an intelligent and professional Data Assistant powered by AI. Your goal 
 ### DATABASE CONTEXT
 You have access to the following Supabase Table Schema:
 - voters: id, booth_id, sl_no, name, guardian_name, house_name, age, gender, id_card_no, house_no, status, has_voted
-- booths: id, ward_id, booth_no, name
-- wards: id, panchayat_id, ward_no, name
-- panchayats: id, name
-- candidates: id, ward_id, name, photo_url, symbol_url, front, quote
+- booths: id, constituency_id, booth_no, name
+- constituencies: id, district_id, constituency_no, name
+- districts: id, name
+- candidates: id, constituency_id, name, photo_url, symbol_url, front, quote
 - profiles: id, role, ward_id
 - system_settings: key, value, description
 - ward_users: id, username, panchayat_id, ward_id, is_active
@@ -155,10 +155,10 @@ export async function parseUserQuery(question) {
         
         ### DATABASE SCHEMA
         - voters: id, booth_id, sl_no, name, guardian_name, house_name, age, gender, id_card_no, house_no, status, has_voted
-        - booths: id, ward_id, booth_no, name
-        - wards: id, panchayat_id, ward_no, name
-        - panchayats: id, name
-        - candidates: id, ward_id, name, photo_url, symbol_url, front, quote
+        - booths: id, constituency_id, booth_no, name
+        - constituencies: id, district_id, constituency_no, name
+        - districts: id, name
+        - candidates: id, constituency_id, name, photo_url, symbol_url, front, quote
         - profiles: id, role, ward_id
         - system_settings: key, value, description
         - ward_users: id, username, panchayat_id, ward_id, is_active
@@ -166,7 +166,7 @@ export async function parseUserQuery(question) {
         Output JSON Format:
         {
             "type": "count" | "list" | "general",
-            "table": "voters" | "booths" | "candidates" | "wards" | "panchayats" | null,
+            "table": "voters" | "booths" | "candidates" | "constituencies" | "districts" | null,
             "filters": [
                 { "column": "column_name", "operator": "eq" | "gt" | "lt" | "gte" | "lte" | "ilike", "value": "value" }
             ],

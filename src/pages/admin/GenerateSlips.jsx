@@ -120,7 +120,7 @@ const VoterSlipItem = React.memo(({ voter, isSelected, onToggle, candidatePhoto,
                             <td className="slip-middle">
                                 <div className="slip-row"><span className="slip-label">പേര്</span><span className="slip-colon">:</span><span className="slip-value bold">{voter.name}</span></div>
                                 <div className="slip-row"><span className="slip-label">രക്ഷിതാവിന്റെ പേര്</span><span className="slip-colon">:</span><span className="slip-value">{voter.guardian_name}</span></div>
-                                <div className="slip-row"><span className="slip-label">വാർഡ് നമ്പർ/വീട്</span><span className="slip-colon">:</span><span className="slip-value">{voter.booths?.wards?.ward_no}/{voter.house_no}</span></div>
+                                <div className="slip-row"><span className="slip-label">മണ്ഡലം നമ്പർ/വീട്</span><span className="slip-colon">:</span><span className="slip-value">{voter.booths?.constituencies?.constituency_no}/{voter.house_no}</span></div>
                                 <div className="slip-row"><span className="slip-label">വീട്ടുപേര്</span><span className="slip-colon">:</span><span className="slip-value">{voter.house_name}</span></div>
                                 <div className="slip-row"><span className="slip-label">ലിംഗം/വയസ്</span><span className="slip-colon">:</span><span className="slip-value">{voter.gender === 'Male' || voter.gender === 'പുരുഷൻ' ? 'M' : 'F'} / {voter.age}</span></div>
                                 <div className="slip-row"><span className="slip-label">പോളിംഗ് സ്റ്റേഷൻ</span><span className="slip-colon">:</span><span className="slip-value">{voter.booths?.booth_no} / {voter.booths?.name}</span></div>
@@ -195,13 +195,13 @@ const VoterSlipItem = React.memo(({ voter, isSelected, onToggle, candidatePhoto,
 
 export default function GenerateSlips() {
     const { user } = useAuth();
-    const [panchayats, setPanchayats] = useState([]);
-    const [wards, setWards] = useState([]);
+    const [districts, setDistricts] = useState([]);
+    const [constituencies, setConstituencies] = useState([]);
     const [booths, setBooths] = useState([]);
     const [candidates, setCandidates] = useState([]);
 
-    const [selectedPanchayat, setSelectedPanchayat] = useState('');
-    const [selectedWard, setSelectedWard] = useState('');
+    const [selectedDistrict, setSelectedDistrict] = useState('');
+    const [selectedConstituency, setSelectedConstituency] = useState('');
     const [selectedBooth, setSelectedBooth] = useState('');
     const [selectedCandidate, setSelectedCandidate] = useState('');
 
@@ -231,61 +231,61 @@ export default function GenerateSlips() {
     const [wardVoters, setWardVoters] = useState([]);
     const [fuseInstance, setFuseInstance] = useState(null);
 
-    // Fetch Panchayats
+    // Fetch Districts
     useEffect(() => {
-        fetchPanchayats();
+        fetchDistricts();
     }, []);
 
-    const fetchPanchayats = async () => {
+    const fetchDistricts = async () => {
         try {
-            const { data, error } = await supabase.from('panchayats').select('*').order('name');
+            const { data, error } = await supabase.from('districts').select('*').order('name');
             if (error) throw error;
-            setPanchayats(data);
+            setDistricts(data);
         } catch (error) {
-            console.error('Error fetching panchayats:', error);
+            console.error('Error fetching districts:', error);
         }
     };
 
-    // Fetch Wards
+    // Fetch Constituencies
     useEffect(() => {
-        if (selectedPanchayat) {
-            fetchWards(selectedPanchayat);
+        if (selectedDistrict) {
+            fetchConstituencies(selectedDistrict);
         } else {
-            setWards([]);
+            setConstituencies([]);
         }
-    }, [selectedPanchayat]);
+    }, [selectedDistrict]);
 
-    const fetchWards = async (panchayatId) => {
+    const fetchConstituencies = async (districtId) => {
         try {
             const { data, error } = await supabase
-                .from('wards')
+                .from('constituencies')
                 .select('*')
-                .eq('panchayat_id', panchayatId)
-                .order('ward_no');
+                .eq('district_id', districtId)
+                .order('constituency_no');
             if (error) throw error;
-            setWards(data);
+            setConstituencies(data);
         } catch (error) {
-            console.error('Error fetching wards:', error);
+            console.error('Error fetching constituencies:', error);
         }
     };
 
     // Fetch Booths and Candidates
     useEffect(() => {
-        if (selectedWard) {
-            fetchBooths(selectedWard);
-            fetchCandidates(selectedWard);
+        if (selectedConstituency) {
+            fetchBooths(selectedConstituency);
+            fetchCandidates(selectedConstituency);
         } else {
             setBooths([]);
             setCandidates([]);
         }
-    }, [selectedWard]);
+    }, [selectedConstituency]);
 
-    const fetchBooths = async (wardId) => {
+    const fetchBooths = async (constituencyId) => {
         try {
             const { data, error } = await supabase
                 .from('booths')
                 .select('*')
-                .eq('ward_id', wardId)
+                .eq('constituency_id', constituencyId)
                 .order('booth_no');
             if (error) throw error;
             setBooths(data);
@@ -294,12 +294,12 @@ export default function GenerateSlips() {
         }
     };
 
-    const fetchCandidates = async (wardId) => {
+    const fetchCandidates = async (constituencyId) => {
         try {
             const { data, error } = await supabase
                 .from('candidates')
                 .select('*')
-                .eq('ward_id', wardId);
+                .eq('constituency_id', constituencyId);
             if (error) throw error;
             setCandidates(data);
         } catch (error) {
@@ -319,8 +319,8 @@ export default function GenerateSlips() {
                     booths (
                         name,
                         booth_no,
-                        wards (
-                            ward_no,
+                        constituencies (
+                            constituency_no,
                             name
                         )
                     )
@@ -422,18 +422,18 @@ export default function GenerateSlips() {
     // Ward Member Pre-selection & Data Fetching
     useEffect(() => {
         if (isWardMember && user?.ward_id) {
-            const fetchWardDetails = async () => {
-                const { data, error } = await supabase.from('wards').select('*, panchayats(*)').eq('id', user.ward_id).single();
+            const fetchConstituencyDetails = async () => {
+                const { data, error } = await supabase.from('constituencies').select('*, districts(*)').eq('id', user.ward_id).single();
                 if (data) {
-                    setSelectedPanchayat(data.panchayat_id);
-                    setSelectedWard(data.id);
+                    setSelectedDistrict(data.district_id);
+                    setSelectedConstituency(data.id);
                 }
             };
-            fetchWardDetails();
+            fetchConstituencyDetails();
 
-            // Fetch all voters for this ward for instant search
+            // Fetch all voters for this constituency for instant search
             const fetchAllWardVoters = async () => {
-                const { data: boothsData } = await supabase.from('booths').select('id').eq('ward_id', user.ward_id);
+                const { data: boothsData } = await supabase.from('booths').select('id').eq('constituency_id', user.ward_id);
                 if (boothsData) {
                     const boothIds = boothsData.map(b => b.id);
                     if (boothIds.length > 0) {
@@ -444,8 +444,8 @@ export default function GenerateSlips() {
                                 booths (
                                     name,
                                     booth_no,
-                                    wards (
-                                        ward_no,
+                                    constituencies (
+                                        constituency_no,
                                         name,
                                         id
                                     )
@@ -521,8 +521,8 @@ export default function GenerateSlips() {
                                 booths (
                                     name,
                                     booth_no,
-                                    wards (
-                                        ward_no,
+                                    constituencies (
+                                        constituency_no,
                                         name,
                                         id
                                     )
@@ -539,7 +539,7 @@ export default function GenerateSlips() {
 
                         // Filter for Ward Member (safety check if fuse failed)
                         if (isWardMember && user?.ward_id) {
-                            results = results.filter(v => v.booths?.wards?.id === user.ward_id);
+                            results = results.filter(v => v.booths?.constituencies?.id === user.ward_id);
                         }
 
                         setIndividualSearchResults(results);
@@ -594,40 +594,40 @@ export default function GenerateSlips() {
                     <div className="card" style={{ marginBottom: '2rem', padding: '1.5rem' }}>
                         <div className="responsive-grid" style={{ gap: '1rem', marginBottom: '1.5rem' }}>
                             <div className="form-group">
-                                <label className="label">പഞ്ചായത്ത്</label>
+                                <label className="label">ജില്ല</label>
                                 <select
                                     className="input"
-                                    value={selectedPanchayat}
+                                    value={selectedDistrict}
                                     onChange={e => {
-                                        setSelectedPanchayat(e.target.value);
-                                        setSelectedWard('');
+                                        setSelectedDistrict(e.target.value);
+                                        setSelectedConstituency('');
                                         setSelectedBooth('');
                                         setSelectedCandidate('');
                                     }}
                                     disabled={isWardMember}
                                 >
                                     <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
-                                    {panchayats.map(p => (
-                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                    {districts.map(d => (
+                                        <option key={d.id} value={d.id}>{d.name}</option>
                                     ))}
                                 </select>
                             </div>
 
                             <div className="form-group">
-                                <label className="label">വാർഡ്</label>
+                                <label className="label">നിയോജക മണ്ഡലം</label>
                                 <select
                                     className="input"
-                                    value={selectedWard}
+                                    value={selectedConstituency}
                                     onChange={e => {
-                                        setSelectedWard(e.target.value);
+                                        setSelectedConstituency(e.target.value);
                                         setSelectedBooth('');
                                         setSelectedCandidate('');
                                     }}
-                                    disabled={!selectedPanchayat || isWardMember}
+                                    disabled={!selectedDistrict || isWardMember}
                                 >
                                     <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
-                                    {wards.map(w => (
-                                        <option key={w.id} value={w.id}>{w.ward_no} - {w.name}</option>
+                                    {constituencies.map(c => (
+                                        <option key={c.id} value={c.id}>{c.constituency_no} - {c.name}</option>
                                     ))}
                                 </select>
                             </div>
@@ -638,7 +638,7 @@ export default function GenerateSlips() {
                                     className="input"
                                     value={selectedBooth}
                                     onChange={e => setSelectedBooth(e.target.value)}
-                                    disabled={!selectedWard}
+                                    disabled={!selectedConstituency}
                                 >
                                     <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
                                     {booths.map(b => (
@@ -656,7 +656,7 @@ export default function GenerateSlips() {
                                         className="input"
                                         value={selectedCandidate}
                                         onChange={e => setSelectedCandidate(e.target.value)}
-                                        disabled={!selectedWard}
+                                        disabled={!selectedConstituency}
                                         style={{ flex: 1 }}
                                     >
                                         <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
@@ -705,38 +705,38 @@ export default function GenerateSlips() {
                     <div className="card" style={{ marginBottom: '2rem', padding: '1.5rem', overflow: 'visible' }}>
                         <div className="responsive-grid" style={{ marginBottom: '1.5rem' }}>
                             <div className="form-group">
-                                <label className="label">പഞ്ചായത്ത്</label>
+                                <label className="label">ജില്ല</label>
                                 <select
                                     className="input"
-                                    value={selectedPanchayat}
+                                    value={selectedDistrict}
                                     onChange={e => {
-                                        setSelectedPanchayat(e.target.value);
-                                        setSelectedWard('');
+                                        setSelectedDistrict(e.target.value);
+                                        setSelectedConstituency('');
                                         setSelectedCandidate('');
                                     }}
                                     disabled={isWardMember}
                                 >
                                     <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
-                                    {panchayats.map(p => (
-                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                    {districts.map(d => (
+                                        <option key={d.id} value={d.id}>{d.name}</option>
                                     ))}
                                 </select>
                             </div>
 
                             <div className="form-group">
-                                <label className="label">വാർഡ്</label>
+                                <label className="label">നിയോജക മണ്ഡലം</label>
                                 <select
                                     className="input"
-                                    value={selectedWard}
+                                    value={selectedConstituency}
                                     onChange={e => {
-                                        setSelectedWard(e.target.value);
+                                        setSelectedConstituency(e.target.value);
                                         setSelectedCandidate('');
                                     }}
-                                    disabled={!selectedPanchayat || isWardMember}
+                                    disabled={!selectedDistrict || isWardMember}
                                 >
                                     <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
-                                    {wards.map(w => (
-                                        <option key={w.id} value={w.id}>{w.ward_no} - {w.name}</option>
+                                    {constituencies.map(c => (
+                                        <option key={c.id} value={c.id}>{c.constituency_no} - {c.name}</option>
                                     ))}
                                 </select>
                             </div>
@@ -748,7 +748,7 @@ export default function GenerateSlips() {
                                         className="input"
                                         value={selectedCandidate}
                                         onChange={e => setSelectedCandidate(e.target.value)}
-                                        disabled={!selectedWard}
+                                        disabled={!selectedConstituency}
                                         style={{ flex: 1 }}
                                     >
                                         <option value="">-- തിരഞ്ഞെടുക്കുക --</option>

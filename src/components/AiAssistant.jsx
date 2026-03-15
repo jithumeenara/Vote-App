@@ -34,7 +34,7 @@ export default function AiAssistant() {
                 const { data } = await supabase
                     .from('booths')
                     .select('id')
-                    .eq('ward_id', user.ward_id);
+                    .eq('constituency_id', user.ward_id);
                 if (data) {
                     setWardBoothIds(data.map(b => b.id));
                 }
@@ -71,13 +71,13 @@ export default function AiAssistant() {
                     } else {
                         // Enhanced Select with Joins for better context
                         if (queryIntent.table === 'voters') {
-                            query = query.select('*, booths(name, booth_no), wards(name, ward_no, panchayats(name))').limit(queryIntent.limit || 5);
+                            query = query.select('*, booths(name, booth_no), constituencies(name, constituency_no, districts(name))').limit(queryIntent.limit || 5);
                         } else if (queryIntent.table === 'booths') {
-                            query = query.select('*, wards(name, ward_no, panchayats(name))').limit(queryIntent.limit || 5);
-                        } else if (queryIntent.table === 'wards') {
-                            query = query.select('*, panchayats(name)').limit(queryIntent.limit || 5);
+                            query = query.select('*, constituencies(name, constituency_no, districts(name))').limit(queryIntent.limit || 5);
+                        } else if (queryIntent.table === 'constituencies') {
+                            query = query.select('*, districts(name)').limit(queryIntent.limit || 5);
                         } else if (queryIntent.table === 'candidates') {
-                            query = query.select('*, wards(name, ward_no, panchayats(name))').limit(queryIntent.limit || 5);
+                            query = query.select('*, constituencies(name, constituency_no, districts(name))').limit(queryIntent.limit || 5);
                         } else {
                             query = query.select('*').limit(queryIntent.limit || 5);
                         }
@@ -105,14 +105,13 @@ export default function AiAssistant() {
                                 query = query.eq('id', -1); // Impossible ID
                             }
                         } else if (queryIntent.table === 'booths') {
-                            query = query.eq('ward_id', user.ward_id);
+                            query = query.eq('constituency_id', user.ward_id);
                         } else if (queryIntent.table === 'candidates') {
-                            query = query.eq('ward_id', user.ward_id);
-                        } else if (queryIntent.table === 'wards') {
+                            query = query.eq('constituency_id', user.ward_id);
+                        } else if (queryIntent.table === 'constituencies') {
                             query = query.eq('id', user.ward_id);
-                        } else if (queryIntent.table === 'panchayats') {
-                            // Allow querying panchayats, but maybe we could restrict to the user's panchayat if needed.
-                            // For now, let's allow it as it's general info.
+                        } else if (queryIntent.table === 'districts') {
+                            // General info — no restriction needed
                         }
                     }
                     // -----------------------------------------

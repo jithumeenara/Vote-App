@@ -11,12 +11,12 @@ export default function VoterStatusReports() {
     const { addToast } = useToast();
     const componentRef = useRef();
 
-    const [panchayats, setPanchayats] = useState([]);
-    const [wards, setWards] = useState([]);
+    const [districts, setDistricts] = useState([]);
+    const [constituencies, setConstituencies] = useState([]);
     const [booths, setBooths] = useState([]);
 
-    const [selectedPanchayat, setSelectedPanchayat] = useState('');
-    const [selectedWard, setSelectedWard] = useState('');
+    const [selectedDistrict, setSelectedDistrict] = useState('');
+    const [selectedConstituency, setSelectedConstituency] = useState('');
     const [selectedBooth, setSelectedBooth] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('shifted');
 
@@ -39,10 +39,10 @@ export default function VoterStatusReports() {
     ];
 
     useEffect(() => {
-        fetchPanchayats();
+        fetchDistricts();
         fetchFronts();
         if (isWardMember && user?.ward_id) {
-            fetchUserWardDetails();
+            fetchUserConstituencyDetails();
         }
     }, [user]);
 
@@ -51,57 +51,57 @@ export default function VoterStatusReports() {
         setFronts(data || []);
     }
 
-    async function fetchUserWardDetails() {
+    async function fetchUserConstituencyDetails() {
         const { data } = await supabase
-            .from('wards')
-            .select('id, panchayat_id')
+            .from('constituencies')
+            .select('id, district_id')
             .eq('id', user.ward_id)
             .single();
 
         if (data) {
-            setSelectedPanchayat(data.panchayat_id);
-            setSelectedWard(data.id);
+            setSelectedDistrict(data.district_id);
+            setSelectedConstituency(data.id);
         }
     }
 
-    async function fetchPanchayats() {
-        const { data } = await supabase.from('panchayats').select('*').order('name');
-        setPanchayats(data || []);
+    async function fetchDistricts() {
+        const { data } = await supabase.from('districts').select('*').order('name');
+        setDistricts(data || []);
     }
 
     useEffect(() => {
-        if (selectedPanchayat) {
-            fetchWards(selectedPanchayat);
+        if (selectedDistrict) {
+            fetchConstituencies(selectedDistrict);
         } else {
-            setWards([]);
+            setConstituencies([]);
         }
-    }, [selectedPanchayat]);
+    }, [selectedDistrict]);
 
-    async function fetchWards(panchayatId) {
-        const { data } = await supabase.from('wards').select('*').eq('panchayat_id', panchayatId).order('ward_no');
-        setWards(data || []);
+    async function fetchConstituencies(districtId) {
+        const { data } = await supabase.from('constituencies').select('*').eq('district_id', districtId).order('constituency_no');
+        setConstituencies(data || []);
     }
 
     useEffect(() => {
-        if (selectedWard) {
-            fetchBooths(selectedWard);
+        if (selectedConstituency) {
+            fetchBooths(selectedConstituency);
         } else {
             setBooths([]);
         }
-    }, [selectedWard]);
+    }, [selectedConstituency]);
 
-    async function fetchBooths(wardId) {
-        const { data } = await supabase.from('booths').select('*').eq('ward_id', wardId).order('booth_no');
+    async function fetchBooths(constituencyId) {
+        const { data } = await supabase.from('booths').select('*').eq('constituency_id', constituencyId).order('booth_no');
         setBooths(data || []);
     }
 
     useEffect(() => {
-        if (selectedWard) {
+        if (selectedConstituency) {
             fetchVoters();
         } else {
             setVoters([]);
         }
-    }, [selectedWard, selectedBooth, selectedStatus]);
+    }, [selectedConstituency, selectedBooth, selectedStatus]);
 
     async function fetchVoters() {
         setLoading(true);
@@ -117,9 +117,8 @@ export default function VoterStatusReports() {
 
             if (selectedBooth) {
                 query = query.eq('booth_id', selectedBooth);
-            } else if (selectedWard) {
-                // Fetch booth IDs for the ward
-                const { data: bData } = await supabase.from('booths').select('id').eq('ward_id', selectedWard);
+            } else if (selectedConstituency) {
+                const { data: bData } = await supabase.from('booths').select('id').eq('constituency_id', selectedConstituency);
                 const bIds = bData.map(b => b.id);
                 if (bIds.length > 0) {
                     query = query.in('booth_id', bIds);
@@ -201,27 +200,27 @@ export default function VoterStatusReports() {
             <div className="card" style={{ marginBottom: '2rem', padding: '1.5rem' }}>
                 <div className="responsive-grid">
                     <div className="form-group">
-                        <label className="label">പഞ്ചായത്ത്</label>
+                        <label className="label">ജില്ല</label>
                         <select
                             className="input"
-                            value={selectedPanchayat}
-                            onChange={e => { setSelectedPanchayat(e.target.value); setSelectedWard(''); setSelectedBooth(''); }}
+                            value={selectedDistrict}
+                            onChange={e => { setSelectedDistrict(e.target.value); setSelectedConstituency(''); setSelectedBooth(''); }}
                             disabled={isWardMember}
                         >
                             <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
-                            {panchayats.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            {districts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                         </select>
                     </div>
                     <div className="form-group">
-                        <label className="label">വാർഡ്</label>
+                        <label className="label">നിയോജക മണ്ഡലം</label>
                         <select
                             className="input"
-                            value={selectedWard}
-                            onChange={e => { setSelectedWard(e.target.value); setSelectedBooth(''); }}
-                            disabled={!selectedPanchayat || isWardMember}
+                            value={selectedConstituency}
+                            onChange={e => { setSelectedConstituency(e.target.value); setSelectedBooth(''); }}
+                            disabled={!selectedDistrict || isWardMember}
                         >
                             <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
-                            {wards.map(w => <option key={w.id} value={w.id}>{w.ward_no} - {w.name}</option>)}
+                            {constituencies.map(c => <option key={c.id} value={c.id}>{c.constituency_no} - {c.name}</option>)}
                         </select>
                     </div>
                     <div className="form-group">
@@ -230,7 +229,7 @@ export default function VoterStatusReports() {
                             className="input"
                             value={selectedBooth}
                             onChange={e => setSelectedBooth(e.target.value)}
-                            disabled={!selectedWard}
+                            disabled={!selectedConstituency}
                         >
                             <option value="">-- എല്ലാ ബൂത്തുകളും --</option>
                             {booths.map(b => <option key={b.id} value={b.id}>{b.booth_no} - {b.name}</option>)}
@@ -275,7 +274,7 @@ export default function VoterStatusReports() {
                                     {statusOptions.find(s => s.value === selectedStatus)?.label} Voters List
                                 </h1>
                                 <p style={{ color: '#666', marginBottom: '0.5rem' }}>
-                                    Ward: {wards.find(w => w.id === selectedWard)?.ward_no} |
+                                    Constituency: {constituencies.find(c => c.id === selectedConstituency)?.constituency_no} |
                                     Generated on: {new Date().toLocaleDateString()}
                                 </p>
                                 <p style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--primary)' }}>
@@ -320,7 +319,7 @@ export default function VoterStatusReports() {
                                     മുന്നണി തിരിച്ചുള്ള വോട്ട് കണക്ക് (Front Wise Vote Report)
                                 </h1>
                                 <p style={{ color: '#666', marginBottom: '0.5rem' }}>
-                                    Ward: {wards.find(w => w.id === selectedWard)?.ward_no} | {wards.find(w => w.id === selectedWard)?.name}
+                                    Constituency: {constituencies.find(c => c.id === selectedConstituency)?.constituency_no} | {constituencies.find(c => c.id === selectedConstituency)?.name}
                                 </p>
                             </div>
 

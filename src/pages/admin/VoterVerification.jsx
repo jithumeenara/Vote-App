@@ -11,13 +11,13 @@ export default function VoteVerification() {
     const { addToast } = useToast();
 
     const [activeTab, setActiveTab] = useState('trend'); // Default to 'trend'
-    const [panchayats, setPanchayats] = useState([]);
-    const [wards, setWards] = useState([]);
+    const [districts, setDistricts] = useState([]);
+    const [constituencies, setConstituencies] = useState([]);
     const [booths, setBooths] = useState([]);
     const [fronts, setFronts] = useState([]);
 
-    const [selectedPanchayat, setSelectedPanchayat] = useState('');
-    const [selectedWard, setSelectedWard] = useState('');
+    const [selectedDistrict, setSelectedDistrict] = useState('');
+    const [selectedConstituency, setSelectedConstituency] = useState('');
     const [selectedBooth, setSelectedBooth] = useState('');
 
     const [voters, setVoters] = useState([]);
@@ -32,7 +32,7 @@ export default function VoteVerification() {
     const isWardMember = user?.role === 'ward_member';
 
     useEffect(() => {
-        fetchPanchayats();
+        fetchDistricts();
         fetchFronts();
 
         const handleScroll = () => {
@@ -56,47 +56,47 @@ export default function VoteVerification() {
         setFronts(data || []);
     };
 
-    const fetchPanchayats = async () => {
-        const { data } = await supabase.from('panchayats').select('*').order('name');
-        setPanchayats(data || []);
+    const fetchDistricts = async () => {
+        const { data } = await supabase.from('districts').select('*').order('name');
+        setDistricts(data || []);
     };
 
     useEffect(() => {
-        if (selectedPanchayat) {
-            fetchWards(selectedPanchayat);
+        if (selectedDistrict) {
+            fetchConstituencies(selectedDistrict);
         } else {
-            setWards([]);
+            setConstituencies([]);
         }
-    }, [selectedPanchayat]);
+    }, [selectedDistrict]);
 
-    const fetchWards = async (panchayatId) => {
-        const { data } = await supabase.from('wards').select('*').eq('panchayat_id', panchayatId).order('ward_no');
-        setWards(data || []);
+    const fetchConstituencies = async (districtId) => {
+        const { data } = await supabase.from('constituencies').select('*').eq('district_id', districtId).order('constituency_no');
+        setConstituencies(data || []);
     };
 
     useEffect(() => {
-        if (selectedWard) {
-            fetchBooths(selectedWard);
+        if (selectedConstituency) {
+            fetchBooths(selectedConstituency);
         } else {
             setBooths([]);
         }
-    }, [selectedWard]);
+    }, [selectedConstituency]);
 
-    const fetchBooths = async (wardId) => {
-        const { data } = await supabase.from('booths').select('*').eq('ward_id', wardId).order('booth_no');
+    const fetchBooths = async (constituencyId) => {
+        const { data } = await supabase.from('booths').select('*').eq('constituency_id', constituencyId).order('booth_no');
         setBooths(data || []);
     };
 
     useEffect(() => {
         if (isWardMember && user?.ward_id) {
-            const fetchWardDetails = async () => {
-                const { data } = await supabase.from('wards').select('*, panchayats(*)').eq('id', user.ward_id).single();
+            const fetchConstituencyDetails = async () => {
+                const { data } = await supabase.from('constituencies').select('*, districts(*)').eq('id', user.ward_id).single();
                 if (data) {
-                    setSelectedPanchayat(data.panchayat_id);
-                    setSelectedWard(data.id);
+                    setSelectedDistrict(data.district_id);
+                    setSelectedConstituency(data.id);
                 }
             };
-            fetchWardDetails();
+            fetchConstituencyDetails();
         }
     }, [isWardMember, user]);
 
@@ -106,11 +106,34 @@ export default function VoteVerification() {
         } else {
             setVoters([]);
         }
-        // Always fetch stats if at least a panchayat is selected, or if ward member
-        if (selectedPanchayat || (isWardMember && user?.ward_id)) {
+        if (selectedDistrict || (isWardMember && user?.ward_id)) {
             fetchStats();
         }
-    }, [selectedBooth, selectedWard, selectedPanchayat, activeTab, voteStatusFilter]);
+    }, [selectedBooth, selectedConstituency, selectedDistrict, activeTab, voteStatusFilter]);
+
+    // Real-time: re-fetch stats & voters when any voter record changes
+    useEffect(() => {
+        if (!selectedConstituency && !selectedBooth) return;
+
+        const filter = selectedBooth
+            ? `booth_id=eq.${selectedBooth}`
+            : undefined;
+
+        const channel = supabase
+            .channel(`verification-realtime-${selectedBooth || selectedConstituency}`)
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'voters',
+                ...(filter ? { filter } : {})
+            }, () => {
+                if (selectedBooth) fetchVoters();
+                fetchStats();
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, [selectedBooth, selectedConstituency]);
 
     const fetchVoters = async () => {
         if (!selectedBooth) return;
@@ -132,83 +155,67 @@ export default function VoteVerification() {
         }
     };
 
-    const fetchStats = async () => {
-        if (activeTab !== 'trend') return;
+    const fetchStats = async (forceRun = false) => {
+        if (!forceRun && activeTab !== 'trend') return;
         setLoading(true);
         try {
-            let query = supabase.from('voters').select('supported_front_id, fronts(name, color)');
-
-            if (selectedBooth) {
-                query = query.eq('booth_id', selectedBooth);
-            } else if (selectedWard) {
-                const { data: bData } = await supabase.from('booths').select('id').eq('ward_id', selectedWard);
-                const bIds = bData.map(b => b.id);
-                if (bIds.length > 0) query = query.in('booth_id', bIds);
-                else {
-                    setStats({ total: 0, fronts: [], chartData: [] });
-                    setLoading(false);
-                    return;
-                }
-            } else if (selectedPanchayat) {
-                if (!isWardMember && !selectedWard) {
-                    const { data: wData } = await supabase.from('wards').select('id').eq('panchayat_id', selectedPanchayat);
-                    const wIds = wData.map(w => w.id);
-                    const { data: bData } = await supabase.from('booths').select('id').in('ward_id', wIds);
-                    const bIds = bData.map(b => b.id);
-                    if (bIds.length > 0) query = query.in('booth_id', bIds);
-                    else {
-                        setStats({ total: 0, fronts: [], chartData: [] });
-                        setLoading(false);
-                        return;
-                    }
-                }
+            // Always use constituency-level for trend stats (ignore booth filter)
+            let bIds = [];
+            if (selectedConstituency) {
+                const { data: bData } = await supabase.from('booths').select('id').eq('constituency_id', selectedConstituency);
+                bIds = (bData || []).map(b => b.id);
+            } else if (selectedBooth) {
+                bIds = [selectedBooth];
+            } else if (selectedDistrict && !isWardMember) {
+                const { data: cData } = await supabase.from('constituencies').select('id').eq('district_id', selectedDistrict);
+                const cIds = (cData || []).map(c => c.id);
+                const { data: bData } = await supabase.from('booths').select('id').in('constituency_id', cIds);
+                bIds = (bData || []).map(b => b.id);
             }
 
-            // Apply Vote Status Filter
-            if (voteStatusFilter === 'voted') {
-                query = query.eq('has_voted', true);
-            } else if (voteStatusFilter === 'not_voted') {
-                query = query.eq('has_voted', false);
+            if (bIds.length === 0) {
+                setStats({ total: 0, verified: 0, unverified: 0, fronts: {}, chartData: [] });
+                setLoading(false);
+                return;
             }
 
-            const { data, error } = await query;
-            if (error) throw error;
+            // Use COUNT queries — reliable, no row limit issues
+            const buildBase = () => {
+                let q = supabase.from('voters').select('*', { count: 'exact', head: true }).in('booth_id', bIds);
+                if (voteStatusFilter === 'voted') q = q.eq('has_voted', true);
+                else if (voteStatusFilter === 'not_voted') q = q.eq('has_voted', false);
+                return q;
+            };
 
-            const total = data.length;
+            // Run total + per-front counts in parallel
+            const frontCountQueries = fronts.map(f =>
+                buildBase().eq('supported_front_id', f.id).then(({ count }) => ({ id: f.id, name: f.name, color: f.color, count: count || 0 }))
+            );
+
+            const [totalResult, verifiedResult, ...frontResults] = await Promise.all([
+                buildBase(),
+                buildBase().not('supported_front_id', 'is', null),
+                ...frontCountQueries
+            ]);
+
+            if (totalResult.error) throw totalResult.error;
+
+            const total = totalResult.count || 0;
+            const verifiedCount = verifiedResult.count || 0;
             const frontCounts = {};
-            let verifiedCount = 0;
 
-            data.forEach(v => {
-                if (v.supported_front_id) {
-                    verifiedCount++;
-                    const fname = v.fronts?.name || 'Unknown';
-                    const fcolor = v.fronts?.color || '#666666';
-                    if (!frontCounts[fname]) {
-                        frontCounts[fname] = { count: 0, color: fcolor };
-                    }
-                    frontCounts[fname].count++;
-                } else {
-                    if (!frontCounts['Unverified']) {
-                        frontCounts['Unverified'] = { count: 0, color: '#9ca3af' };
-                    }
-                    frontCounts['Unverified'].count++;
-                }
+            frontResults.forEach(({ name, color, count }) => {
+                if (count > 0) frontCounts[name] = { count, color: color || '#666666' };
             });
 
-            // Prepare data for Recharts
-            const chartData = Object.entries(frontCounts).map(([name, data]) => ({
-                name,
-                value: data.count,
-                color: data.color
+            const unverified = total - verifiedCount;
+            if (unverified > 0) frontCounts['Unverified'] = { count: unverified, color: '#9ca3af' };
+
+            const chartData = Object.entries(frontCounts).map(([name, d]) => ({
+                name, value: d.count, color: d.color
             }));
 
-            setStats({
-                total,
-                verified: verifiedCount,
-                unverified: total - verifiedCount,
-                fronts: frontCounts,
-                chartData
-            });
+            setStats({ total, verified: verifiedCount, unverified, fronts: frontCounts, chartData });
 
         } catch (error) {
             console.error('Error fetching stats:', error);
@@ -223,13 +230,14 @@ export default function VoteVerification() {
         setVoters(voters.map(v => v.id === voterId ? { ...v, has_voted: hasVoted } : v));
 
         try {
-            const { error } = await supabase
-                .from('voters')
-                .update({ has_voted: hasVoted })
-                .eq('id', voterId);
+            const { error } = await supabase.rpc('update_voter_voted', {
+                p_voter_id: voterId,
+                p_has_voted: hasVoted
+            });
 
             if (error) throw error;
             addToast(hasVoted ? 'Marked as voted' : 'Marked as not voted', 'success');
+            fetchStats(true);
         } catch (error) {
             console.error('Error updating vote status:', error);
             addToast('Failed to update: ' + error.message, 'error');
@@ -241,18 +249,31 @@ export default function VoteVerification() {
         const previousVoters = [...voters];
         setVoters(voters.map(v => v.id === voterId ? { ...v, supported_front_id: frontId } : v));
 
-        try {
-            const { error } = await supabase
+        // Try RPC first, fallback to direct update
+        let error = null;
+
+        const rpcResult = await supabase.rpc('update_voter_front', {
+            p_voter_id: voterId,
+            p_front_id: frontId
+        });
+        error = rpcResult.error;
+
+        if (error) {
+            // Fallback: direct update
+            const directResult = await supabase
                 .from('voters')
                 .update({ supported_front_id: frontId })
                 .eq('id', voterId);
+            error = directResult.error;
+        }
 
-            if (error) throw error;
-            addToast('Vote preference updated', 'success');
-        } catch (error) {
-            console.error('Error updating vote preference:', error);
-            addToast('Failed to update: ' + error.message, 'error');
+        if (error) {
+            console.error('Front update failed:', JSON.stringify(error));
+            addToast('Update failed: ' + error.message, 'error');
             setVoters(previousVoters);
+        } else {
+            addToast('Vote preference updated', 'success');
+            fetchStats(true);
         }
     };
 
@@ -282,27 +303,27 @@ export default function VoteVerification() {
                 <div className="card" style={{ marginBottom: '2rem', padding: '1.5rem' }}>
                     <div className="responsive-grid">
                         <div className="form-group">
-                            <label className="label">പഞ്ചായത്ത്</label>
+                            <label className="label">ജില്ല</label>
                             <select
                                 className="input"
-                                value={selectedPanchayat}
-                                onChange={e => { setSelectedPanchayat(e.target.value); setSelectedWard(''); setSelectedBooth(''); }}
+                                value={selectedDistrict}
+                                onChange={e => { setSelectedDistrict(e.target.value); setSelectedConstituency(''); setSelectedBooth(''); }}
                                 disabled={isWardMember}
                             >
                                 <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
-                                {panchayats.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                {districts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                             </select>
                         </div>
                         <div className="form-group">
-                            <label className="label">വാർഡ്</label>
+                            <label className="label">നിയോജക മണ്ഡലം</label>
                             <select
                                 className="input"
-                                value={selectedWard}
-                                onChange={e => { setSelectedWard(e.target.value); setSelectedBooth(''); }}
-                                disabled={!selectedPanchayat || isWardMember}
+                                value={selectedConstituency}
+                                onChange={e => { setSelectedConstituency(e.target.value); setSelectedBooth(''); }}
+                                disabled={!selectedDistrict || isWardMember}
                             >
                                 <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
-                                {wards.map(w => <option key={w.id} value={w.id}>{w.ward_no} - {w.name}</option>)}
+                                {constituencies.map(c => <option key={c.id} value={c.id}>{c.constituency_no} - {c.name}</option>)}
                             </select>
                         </div>
                         <div className="form-group">
@@ -311,7 +332,7 @@ export default function VoteVerification() {
                                 className="input"
                                 value={selectedBooth}
                                 onChange={e => setSelectedBooth(e.target.value)}
-                                disabled={!selectedWard}
+                                disabled={!selectedConstituency}
                             >
                                 <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
                                 {booths.map(b => <option key={b.id} value={b.id}>{b.booth_no} - {b.name}</option>)}
@@ -739,8 +760,8 @@ export default function VoteVerification() {
                                     {/* Chart Section */}
                                     <div className="card" style={{ minHeight: '400px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                         <h3 style={{ marginBottom: '1rem', color: 'var(--primary-bg)' }}>ഗ്രാഫ് (Graph)</h3>
-                                        <div style={{ width: '100%', height: '300px' }}>
-                                            <ResponsiveContainer width="100%" height="100%">
+                                        <div style={{ width: '100%', height: '300px', minHeight: '300px' }}>
+                                            <ResponsiveContainer width="100%" height={300}>
                                                 <PieChart>
                                                     <Pie
                                                         data={stats.chartData}
@@ -791,7 +812,7 @@ export default function VoteVerification() {
                                 </div>
                             ) : (
                                 <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
-                                    വിവരങ്ങൾ ലഭ്യമല്ല. ദയവായി ഒരു വാർഡ് അല്ലെങ്കിൽ ബൂത്ത് തിരഞ്ഞെടുക്കുക.
+                                    വിവരങ്ങൾ ലഭ്യമല്ല. ദയവായി ഒരു നിയോജക മണ്ഡലം അല്ലെങ്കിൽ ബൂത്ത് തിരഞ്ഞെടുക്കുക.
                                 </div>
                             )}
                         </div>

@@ -6,12 +6,12 @@ import { Upload, FileText, X, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function UploadVoters() {
-    const [panchayats, setPanchayats] = useState([]);
-    const [wards, setWards] = useState([]);
+    const [districts, setDistricts] = useState([]);
+    const [constituencies, setConstituencies] = useState([]);
     const [booths, setBooths] = useState([]);
 
-    const [selectedPanchayat, setSelectedPanchayat] = useState('');
-    const [selectedWard, setSelectedWard] = useState('');
+    const [selectedDistrict, setSelectedDistrict] = useState('');
+    const [selectedConstituency, setSelectedConstituency] = useState('');
     const [selectedBooth, setSelectedBooth] = useState('');
 
     const [file, setFile] = useState(null);
@@ -25,54 +25,54 @@ export default function UploadVoters() {
     const isWardMember = user?.role === 'ward_member';
 
     useEffect(() => {
-        fetchPanchayats();
+        fetchDistricts();
         if (isWardMember && user?.ward_id) {
-            fetchUserWardDetails();
+            fetchUserConstituencyDetails();
         }
     }, [user]);
 
-    async function fetchUserWardDetails() {
+    async function fetchUserConstituencyDetails() {
         const { data } = await supabase
-            .from('wards')
-            .select('id, panchayat_id')
+            .from('constituencies')
+            .select('id, district_id')
             .eq('id', user.ward_id)
             .single();
 
         if (data) {
-            setSelectedPanchayat(data.panchayat_id);
-            setSelectedWard(data.id);
+            setSelectedDistrict(data.district_id);
+            setSelectedConstituency(data.id);
         }
     }
 
     useEffect(() => {
-        if (selectedPanchayat) {
-            fetchWards(selectedPanchayat);
+        if (selectedDistrict) {
+            fetchConstituencies(selectedDistrict);
         } else {
-            setWards([]);
+            setConstituencies([]);
             setBooths([]);
         }
-    }, [selectedPanchayat]);
+    }, [selectedDistrict]);
 
     useEffect(() => {
-        if (selectedWard) {
-            fetchBooths(selectedWard);
+        if (selectedConstituency) {
+            fetchBooths(selectedConstituency);
         } else {
             setBooths([]);
         }
-    }, [selectedWard]);
+    }, [selectedConstituency]);
 
-    async function fetchPanchayats() {
-        const { data } = await supabase.from('panchayats').select('*').order('name');
-        setPanchayats(data || []);
+    async function fetchDistricts() {
+        const { data } = await supabase.from('districts').select('*').order('name');
+        setDistricts(data || []);
     }
 
-    async function fetchWards(panchayatId) {
-        const { data } = await supabase.from('wards').select('*').eq('panchayat_id', panchayatId).order('ward_no');
-        setWards(data || []);
+    async function fetchConstituencies(districtId) {
+        const { data } = await supabase.from('constituencies').select('*').eq('district_id', districtId).order('constituency_no');
+        setConstituencies(data || []);
     }
 
-    async function fetchBooths(wardId) {
-        const { data } = await supabase.from('booths').select('*').eq('ward_id', wardId).order('booth_no');
+    async function fetchBooths(constituencyId) {
+        const { data } = await supabase.from('booths').select('*').eq('constituency_id', constituencyId).order('booth_no');
         setBooths(data || []);
     }
 
@@ -140,15 +140,17 @@ export default function UploadVoters() {
                 if (results.data && results.data.length > 0) {
                     const mappedData = results.data.slice(0, 5).map(row => {
                         const genderAge = parseGenderAge(row[findKey(row, ['Gender / Age', 'Gender/Age'])] || '');
+                        const ageRaw = row[findKey(row, ['age', 'Age'])];
+                        const genderRaw = row[findKey(row, ['gender', 'Gender'])];
                         return {
-                            sl_no: row[findKey(row, ['Sl no', 'Sl No', 'Sl.No'])],
-                            name: row[findKey(row, ['Name'])],
-                            guardian_name: row[findKey(row, ['Guardian\'s Name', 'Guardian Name'])],
-                            house_no: row[findKey(row, ['OldWard No/ House No.', 'OldWard No/House No', 'House No'])],
+                            sl_no: row[findKey(row, ['serial_number', 'Sl no', 'Sl No', 'Sl.No'])],
+                            name: row[findKey(row, ['name', 'Name'])],
+                            guardian_name: row[findKey(row, ['parent_or_spouse_name', 'Guardian\'s Name', 'Guardian Name'])],
+                            house_no: row[findKey(row, ['house_number', 'OldWard No/ House No.', 'OldWard No/House No', 'House No'])],
                             house_name: row[findKey(row, ['House Name'])],
-                            gender: genderAge.gender,
-                            age: genderAge.age,
-                            id_card_no: row[findKey(row, ['New SEC ID No.', 'ID Card No', 'SEC ID'])]
+                            gender: genderRaw || genderAge.gender,
+                            age: ageRaw ? parseInt(ageRaw) : genderAge.age,
+                            id_card_no: row[findKey(row, ['voter_id', 'New SEC ID No.', 'ID Card No', 'SEC ID'])]
                         };
                     });
                     setPreviewData(mappedData);
@@ -178,17 +180,19 @@ export default function UploadVoters() {
 
                     const voters = results.data.map(row => {
                         const genderAge = parseGenderAge(row[findKey(row, ['Gender / Age', 'Gender/Age'])] || '');
+                        const ageRaw = row[findKey(row, ['age', 'Age'])];
+                        const genderRaw = row[findKey(row, ['gender', 'Gender'])];
 
                         return {
                             booth_id: selectedBooth,
-                            sl_no: parseInt(row[findKey(row, ['Sl no', 'Sl No', 'Sl.No'])] || 0),
-                            name: row[findKey(row, ['Name'])],
-                            guardian_name: row[findKey(row, ['Guardian\'s Name', 'Guardian Name'])],
-                            house_no: row[findKey(row, ['OldWard No/ House No.', 'OldWard No/House No', 'House No'])],
+                            sl_no: parseInt(row[findKey(row, ['serial_number', 'Sl no', 'Sl No', 'Sl.No'])] || 0),
+                            name: row[findKey(row, ['name', 'Name'])],
+                            guardian_name: row[findKey(row, ['parent_or_spouse_name', 'Guardian\'s Name', 'Guardian Name'])],
+                            house_no: row[findKey(row, ['house_number', 'OldWard No/ House No.', 'OldWard No/House No', 'House No'])],
                             house_name: row[findKey(row, ['House Name'])],
-                            gender: genderAge.gender,
-                            age: genderAge.age,
-                            id_card_no: row[findKey(row, ['New SEC ID No.', 'ID Card No', 'SEC ID'])]
+                            gender: genderRaw || genderAge.gender,
+                            age: ageRaw ? parseInt(ageRaw) : genderAge.age,
+                            id_card_no: row[findKey(row, ['voter_id', 'New SEC ID No.', 'ID Card No', 'SEC ID'])]
                         };
                     });
 
@@ -243,9 +247,9 @@ export default function UploadVoters() {
     }
 
     function downloadSampleCSV() {
-        const csvContent = "\uFEFFSl no,Name,Guardian's Name,OldWard No/ House No.,House Name,Gender / Age,New SEC ID No.\n" +
-            "1,അഥീന എ ജെ,ജയകുമാർ ആർ,007/376,അത്തം,F / 22,SEC048714081\n" +
-            "2,കീർത്തി എ,ശ്രീജിത്ത് എസ്,011/466 H,ഐശ്വര്യ,F / 38,SEC048714046\n";
+        const csvContent = "\uFEFFserial_number,voter_id,name,parent_or_spouse_name,house_number,age,gender\n" +
+            "1,WRS1724202,ദേവിക ബി ജി,ഗോപിനാഥൻ കെ,വാലകത്ത് വീട്,26,സ്ത്രീ\n" +
+            "2,WRS1446467,വൽസലകുമാരി എസ്,സനൽ കുമാർ,/ രാഗാർദ്രം,70,സ്ത്രീ\n";
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
@@ -266,33 +270,33 @@ export default function UploadVoters() {
             <form onSubmit={handleSubmit} className="card">
                 <div className="grid grid-3" style={{ gap: '1rem', marginBottom: '2rem' }}>
                     <div className="form-group">
-                        <label className="label">പഞ്ചായത്ത്</label>
+                        <label className="label">ജില്ല</label>
                         <select
                             className="input"
-                            value={selectedPanchayat}
-                            onChange={e => setSelectedPanchayat(e.target.value)}
+                            value={selectedDistrict}
+                            onChange={e => setSelectedDistrict(e.target.value)}
                             required
                             disabled={isWardMember}
                         >
                             <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
-                            {panchayats.map(p => (
-                                <option key={p.id} value={p.id}>{p.name}</option>
+                            {districts.map(d => (
+                                <option key={d.id} value={d.id}>{d.name}</option>
                             ))}
                         </select>
                     </div>
 
                     <div className="form-group">
-                        <label className="label">വാർഡ്</label>
+                        <label className="label">നിയോജക മണ്ഡലം</label>
                         <select
                             className="input"
-                            value={selectedWard}
-                            onChange={e => setSelectedWard(e.target.value)}
+                            value={selectedConstituency}
+                            onChange={e => setSelectedConstituency(e.target.value)}
                             required
-                            disabled={!selectedPanchayat || isWardMember}
+                            disabled={!selectedDistrict || isWardMember}
                         >
                             <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
-                            {wards.map(w => (
-                                <option key={w.id} value={w.id}>{w.ward_no} - {w.name}</option>
+                            {constituencies.map(c => (
+                                <option key={c.id} value={c.id}>{c.constituency_no} - {c.name}</option>
                             ))}
                         </select>
                     </div>
@@ -304,7 +308,7 @@ export default function UploadVoters() {
                             value={selectedBooth}
                             onChange={e => setSelectedBooth(e.target.value)}
                             required
-                            disabled={!selectedWard}
+                            disabled={!selectedConstituency}
                         >
                             <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
                             {booths.map(b => (
@@ -400,7 +404,7 @@ export default function UploadVoters() {
                                 <div>
                                     <h4 style={{ marginBottom: '0.5rem' }}>ഇവിടെ ക്ലിക്ക് ചെയ്യുക അല്ലെങ്കിൽ ഫയൽ ഡ്രാഗ് ചെയ്യുക</h4>
                                     <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', maxWidth: '300px', margin: '0 auto' }}>
-                                        CSV ഫയൽ മാത്രം. ആവശ്യമായ ഹെഡറുകൾ: Sl no, Name, Guardian's Name, OldWard No/ House No., House Name, Gender / Age, New SEC ID No.
+                                        CSV ഫയൽ മാത്രം. ആവശ്യമായ ഹെഡറുകൾ: serial_number, voter_id, name, parent_or_spouse_name, house_number, age, gender
                                     </p>
                                 </div>
                             </div>

@@ -59,20 +59,22 @@ export default function VoterList() {
         return new Fuse(searchableData, {
             keys: [
                 { name: 'name', weight: 2 },            // Malayalam Name
-                { name: 'manglishName', weight: 1.5 },  // English/Manglish Name
+                { name: 'manglishName', weight: 2 },    // Manglish Name
                 { name: 'sl_no_str', weight: 2 },       // Serial No
                 { name: 'id_card_no', weight: 1.5 },    // ID Card
-                { name: 'house_name', weight: 1 },      // House Name
-                { name: 'manglishHouse', weight: 1 },
+                { name: 'house_name', weight: 1 },      // House Name Malayalam
+                { name: 'manglishHouse', weight: 1 },   // House Name Manglish
+                { name: 'house_no', weight: 1 },        // House Number
                 { name: 'guardian_name', weight: 0.8 },
                 { name: 'manglishGuardian', weight: 0.8 },
-                { name: 'house_no', weight: 0.8 }
             ],
-            threshold: 0.25, // Stricter threshold (was 0.35) to show only highly accurate results
-            distance: 100,
+            threshold: 0.35,        // Balanced: catches Manglish typos like "Raju"→"രാജു"
+            distance: 200,          // Wider match window
             minMatchCharLength: 2,
             includeScore: true,
-            ignoreLocation: true
+            ignoreLocation: true,
+            useExtendedSearch: false,
+            findAllMatches: true
         });
     }, [voters]);
 
@@ -181,7 +183,7 @@ export default function VoterList() {
                         <Search size={20} style={{ position: 'absolute', left: '1.2rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
                         <input
                             type="text"
-                            placeholder="തിരയുക (പേര്, വീട്ടുപേര്, നമ്പർ...)"
+                            placeholder="തിരയുക: പേര്, Manglish, SL No, ID..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             style={{
@@ -319,13 +321,11 @@ export default function VoterList() {
                                         gridTemplateColumns: '1fr 1fr',
                                         gap: '1rem 1.5rem',
                                     }}>
-                                        <div>
-                                            <div style={{ color: 'var(--text-light)', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.2rem' }}>വീട്ടുപേര്</div>
-                                            <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '1.05rem' }}>{voter.house_name || '-'}</div>
-                                        </div>
-                                        <div>
-                                            <div style={{ color: 'var(--text-light)', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.2rem' }}>വീട്ടുനമ്പർ</div>
-                                            <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '1.05rem' }}>{voter.house_no || '-'}</div>
+                                        <div style={{ gridColumn: '1 / -1' }}>
+                                            <div style={{ color: 'var(--text-light)', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.2rem' }}>വീട്ടുനമ്പർ/വീട്ടുപേര്</div>
+                                            <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '1.05rem' }}>
+                                                {[voter.house_no, voter.house_name].filter(Boolean).join(' • ') || '-'}
+                                            </div>
                                         </div>
                                         <div>
                                             <div style={{ color: 'var(--text-light)', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.2rem' }}>വിവരങ്ങൾ</div>
