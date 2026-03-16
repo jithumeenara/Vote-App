@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import Pagination from '../../components/Pagination';
 import { CheckCircle, XCircle, Search, Filter, RotateCcw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -23,7 +24,7 @@ export default function MarkVotes() {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [totalVoters, setTotalVoters] = useState(0);
-    const PAGE_SIZE = 10;
+    const [pageSize, setPageSize] = useState(10);
 
     const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'voted'
     const [confirmingVoter, setConfirmingVoter] = useState(null);
@@ -116,12 +117,12 @@ export default function MarkVotes() {
         }
     }, [selectedBooth, activeTab, searchTerm]);
 
-    const fetchVoters = async (page = currentPage) => {
+    const fetchVoters = async (page = currentPage, size = pageSize) => {
         if (!selectedBooth) return;
         setLoading(true);
         try {
-            const from = (page - 1) * PAGE_SIZE;
-            const to = from + PAGE_SIZE - 1;
+            const from = (page - 1) * size;
+            const to = from + size - 1;
 
             let query = supabase
                 .from('voters')
@@ -131,7 +132,14 @@ export default function MarkVotes() {
 
             if (activeTab === 'pending') query = query.eq('has_voted', false);
             else query = query.eq('has_voted', true);
-            if (searchTerm.trim()) query = query.ilike('name', `%${searchTerm.trim()}%`);
+            if (searchTerm.trim()) {
+                const term = searchTerm.trim();
+                const isNum = /^\d+$/.test(term);
+                const orFilter = isNum
+                    ? `name.ilike.%${term}%,id_card_no.ilike.%${term}%,sl_no.eq.${term}`
+                    : `name.ilike.%${term}%,id_card_no.ilike.%${term}%`;
+                query = query.or(orFilter);
+            }
 
             const { data, error, count } = await query.range(from, to);
 
@@ -146,13 +154,19 @@ export default function MarkVotes() {
         }
     };
 
-    const totalPages = Math.ceil(totalVoters / PAGE_SIZE);
+    const totalPages = Math.ceil(totalVoters / pageSize);
 
     const handlePageChange = (newPage) => {
         if (newPage < 1 || newPage > totalPages) return;
         setCurrentPage(newPage);
-        fetchVoters(newPage);
+        fetchVoters(newPage, pageSize);
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handlePageSizeChange = (newSize) => {
+        setPageSize(newSize);
+        setCurrentPage(1);
+        fetchVoters(1, newSize);
     };
 
     const handleVoteClick = (voter) => {
@@ -515,31 +529,14 @@ export default function MarkVotes() {
 
                             {/* Pagination Controls */}
                             {totalVoters > 0 && (
-                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', padding: '1.5rem 0', flexWrap: 'wrap' }}>
-                                    <button
-                                        onClick={() => handlePageChange(currentPage - 1)}
-                                        disabled={currentPage === 1 || loading}
-                                        style={{
-                                            padding: '0.5rem 1.2rem', borderRadius: '8px', border: '2px solid var(--primary)',
-                                            background: currentPage === 1 ? '#f0f0f0' : 'var(--primary)', color: currentPage === 1 ? '#999' : 'white',
-                                            cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '1.2rem'
-                                        }}
-                                    >‹</button>
-
-                                    <span style={{ fontSize: '0.95rem', color: '#555', fontWeight: '500' }}>
-                                        {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, totalVoters)} / {totalVoters} വോട്ടർമാർ
-                                    </span>
-
-                                    <button
-                                        onClick={() => handlePageChange(currentPage + 1)}
-                                        disabled={currentPage >= totalPages || loading}
-                                        style={{
-                                            padding: '0.5rem 1.2rem', borderRadius: '8px', border: '2px solid var(--primary)',
-                                            background: currentPage >= totalPages ? '#f0f0f0' : 'var(--primary)', color: currentPage >= totalPages ? '#999' : 'white',
-                                            cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '1.2rem'
-                                        }}
-                                    >›</button>
-                                </div>
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    totalItems={totalVoters}
+                                    pageSize={pageSize}
+                                    onPageChange={handlePageChange}
+                                    onPageSizeChange={handlePageSizeChange}
+                                />
                             )}
                         </div>
                     )}

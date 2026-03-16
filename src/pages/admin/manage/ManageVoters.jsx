@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { Edit, Trash2, Save, X, Search, Bot } from 'lucide-react';
 import LoadingSpinner from '../../../components/LoadingSpinner';
+import Pagination from '../../../components/Pagination';
 import ConfirmModal from '../../../components/ConfirmModal';
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
@@ -22,7 +23,7 @@ export default function ManageVoters() {
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const PAGE_SIZE = 10;
+    const [pageSize, setPageSize] = useState(10);
 
     const [editingId, setEditingId] = useState(null);
     const [editData, setEditData] = useState({});
@@ -123,22 +124,26 @@ export default function ManageVoters() {
     async function fetchVoters(boothId) {
         setLoading(true);
         try {
-            if (isWardMember) {
-                // Secure RPC for Ward User
-                const { data, error } = await supabase.rpc('ward_get_voters', {
-                    token: user.session_token,
-                    booth_id_input: boothId
-                });
+            // Batch fetch to bypass 1000-row server limit (works for both admin and ward members)
+            const BATCH = 1000;
+            let all = [];
+            let offset = 0;
+            while (true) {
+                const { data, error } = await supabase
+                    .from('voters')
+                    .select('*')
+                    .eq('booth_id', boothId)
+                    .order('sl_no')
+                    .range(offset, offset + BATCH - 1);
                 if (error) throw error;
-                setVoters(data || []);
-            } else {
-                // Standard Select for Admin
-                const { data, error } = await supabase.from('voters').select('*').eq('booth_id', boothId).order('sl_no').range(0, 9999);
-                if (error) throw error;
-                setVoters(data || []);
+                all = all.concat(data || []);
+                if (!data || data.length < BATCH) break;
+                offset += BATCH;
             }
+            setVoters(all);
         } catch (error) {
             console.error('Error fetching voters:', error);
+            addToast('വോട്ടർ ഡേറ്റ ലോഡ് ചെയ്യുന്നതിൽ പരാജയം: ' + error.message, 'error');
         } finally {
             setLoading(false);
         }
@@ -255,8 +260,8 @@ export default function ManageVoters() {
         return matchesNormal || matchesAi;
     });
 
-    const totalPages = Math.ceil(filteredVoters.length / PAGE_SIZE);
-    const pagedVoters = filteredVoters.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+    const totalPages = Math.ceil(filteredVoters.length / pageSize);
+    const pagedVoters = filteredVoters.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     return (
         <div className="container">
@@ -476,21 +481,14 @@ export default function ManageVoters() {
                     )}
 
                     {filteredVoters.length > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', padding: '1.5rem 0', flexWrap: 'wrap' }}>
-                            <button
-                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                disabled={currentPage === 1}
-                                style={{ padding: '0.5rem 1.2rem', borderRadius: '8px', border: '2px solid var(--primary)', background: currentPage === 1 ? '#f0f0f0' : 'var(--primary)', color: currentPage === 1 ? '#999' : 'white', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '1.2rem' }}
-                            >‹</button>
-                            <span style={{ fontSize: '0.95rem', color: '#555', fontWeight: '500' }}>
-                                {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, filteredVoters.length)} / {filteredVoters.length} വോട്ടർമാർ
-                            </span>
-                            <button
-                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                disabled={currentPage >= totalPages}
-                                style={{ padding: '0.5rem 1.2rem', borderRadius: '8px', border: '2px solid var(--primary)', background: currentPage >= totalPages ? '#f0f0f0' : 'var(--primary)', color: currentPage >= totalPages ? '#999' : 'white', cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '1.2rem' }}
-                            >›</button>
-                        </div>
+                        <Pagination
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            totalItems={filteredVoters.length}
+                            pageSize={pageSize}
+                            onPageChange={(p) => setCurrentPage(p)}
+                            onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
+                        />
                     )}
                 </div>
             )}
