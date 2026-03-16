@@ -798,8 +798,8 @@ export default function VoteVerification() {
                                     {/* Chart Section */}
                                     <div className="card" style={{ minHeight: '400px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                         <h3 style={{ marginBottom: '1rem', color: 'var(--primary-bg)' }}>ഗ്രാഫ് (Graph)</h3>
-                                        <div style={{ width: '100%', height: '300px', minHeight: '300px' }}>
-                                            <ResponsiveContainer width="100%" height={300}>
+                                        <div style={{ width: '100%', height: '300px', minHeight: '300px', minWidth: '0' }}>
+                                            <ResponsiveContainer width="100%" height={300} minWidth={0}>
                                                 <PieChart>
                                                     <Pie
                                                         data={stats.chartData}

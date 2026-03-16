@@ -21,6 +21,8 @@ export default function ManageVoters() {
     const [voters, setVoters] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const PAGE_SIZE = 10;
 
     const [editingId, setEditingId] = useState(null);
     const [editData, setEditData] = useState({});
@@ -236,6 +238,7 @@ export default function ManageVoters() {
 
     function handleSearchChange(e) {
         setSearchTerm(e.target.value);
+        setCurrentPage(1);
     }
 
     const filteredVoters = voters.filter(v => {
@@ -251,6 +254,9 @@ export default function ManageVoters() {
         const matchesAi = aiSearchTerms.some(term => v.name.includes(term));
         return matchesNormal || matchesAi;
     });
+
+    const totalPages = Math.ceil(filteredVoters.length / PAGE_SIZE);
+    const pagedVoters = filteredVoters.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     return (
         <div className="container">
@@ -363,7 +369,7 @@ export default function ManageVoters() {
 
             {loading ? <LoadingSpinner /> : (
                 <div className="grid">
-                    {filteredVoters.map((voter) => (
+                    {pagedVoters.map((voter) => (
                         <div key={voter.id} className="card" style={{ padding: '1rem', position: 'relative', overflow: 'hidden' }}>
                             {voter.status !== 'active' && (
                                 <div style={{
@@ -467,6 +473,24 @@ export default function ManageVoters() {
                     ))}
                     {selectedBooth && filteredVoters.length === 0 && (
                         <div style={{ color: 'var(--text-light)' }}>വോട്ടർമാരെ കണ്ടെത്തിയില്ല.</div>
+                    )}
+
+                    {filteredVoters.length > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', padding: '1.5rem 0', flexWrap: 'wrap' }}>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                style={{ padding: '0.5rem 1.2rem', borderRadius: '8px', border: '2px solid var(--primary)', background: currentPage === 1 ? '#f0f0f0' : 'var(--primary)', color: currentPage === 1 ? '#999' : 'white', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '1.2rem' }}
+                            >‹</button>
+                            <span style={{ fontSize: '0.95rem', color: '#555', fontWeight: '500' }}>
+                                {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, filteredVoters.length)} / {filteredVoters.length} വോട്ടർമാർ
+                            </span>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage >= totalPages}
+                                style={{ padding: '0.5rem 1.2rem', borderRadius: '8px', border: '2px solid var(--primary)', background: currentPage >= totalPages ? '#f0f0f0' : 'var(--primary)', color: currentPage >= totalPages ? '#999' : 'white', cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '1.2rem' }}
+                            >›</button>
+                        </div>
                     )}
                 </div>
             )}
