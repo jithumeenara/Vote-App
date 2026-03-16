@@ -19,9 +19,11 @@ export default function MarkVotes() {
     const [selectedBooth, setSelectedBooth] = useState('');
 
     const [voters, setVoters] = useState([]);
-    const [filteredVoters, setFilteredVoters] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalVoters, setTotalVoters] = useState(0);
+    const PAGE_SIZE = 10;
 
     const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'voted'
     const [confirmingVoter, setConfirmingVoter] = useState(null);
@@ -106,25 +108,36 @@ export default function MarkVotes() {
     // Fetch Voters
     useEffect(() => {
         if (selectedBooth) {
-            fetchVoters();
+            setCurrentPage(1);
+            fetchVoters(1);
         } else {
             setVoters([]);
-            setFilteredVoters([]);
+            setTotalVoters(0);
         }
-    }, [selectedBooth]);
+    }, [selectedBooth, activeTab, searchTerm]);
 
-    const fetchVoters = async () => {
+    const fetchVoters = async (page = currentPage) => {
+        if (!selectedBooth) return;
         setLoading(true);
         try {
-            const { data, error } = await supabase
+            const from = (page - 1) * PAGE_SIZE;
+            const to = from + PAGE_SIZE - 1;
+
+            let query = supabase
                 .from('voters')
-                .select('*')
+                .select('*', { count: 'exact' })
                 .eq('booth_id', selectedBooth)
-                .order('sl_no')
-                .range(0, 9999);
+                .order('sl_no');
+
+            if (activeTab === 'pending') query = query.eq('has_voted', false);
+            else query = query.eq('has_voted', true);
+            if (searchTerm.trim()) query = query.ilike('name', `%${searchTerm.trim()}%`);
+
+            const { data, error, count } = await query.range(from, to);
 
             if (error) throw error;
-            setVoters(data);
+            setVoters(data || []);
+            setTotalVoters(count || 0);
         } catch (error) {
             console.error('Error fetching voters:', error);
             addToast('Error fetching voters', 'error');
@@ -133,30 +146,14 @@ export default function MarkVotes() {
         }
     };
 
-    // Filter Voters based on Tab and Search
-    useEffect(() => {
-        let result = voters;
+    const totalPages = Math.ceil(totalVoters / PAGE_SIZE);
 
-        // Filter by Tab (has_voted)
-        if (activeTab === 'pending') {
-            result = result.filter(v => !v.has_voted);
-        } else {
-            result = result.filter(v => v.has_voted);
-        }
-
-        // Filter by Search
-        if (searchTerm) {
-            const lowerTerm = searchTerm.toLowerCase();
-            result = result.filter(v =>
-                v.name.toLowerCase().includes(lowerTerm) ||
-                v.sl_no.toString().includes(lowerTerm) ||
-                (v.guardian_name && v.guardian_name.toLowerCase().includes(lowerTerm)) ||
-                (v.house_name && v.house_name.toLowerCase().includes(lowerTerm))
-            );
-        }
-
-        setFilteredVoters(result);
-    }, [voters, activeTab, searchTerm]);
+    const handlePageChange = (newPage) => {
+        if (newPage < 1 || newPage > totalPages) return;
+        setCurrentPage(newPage);
+        fetchVoters(newPage);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
     const handleVoteClick = (voter) => {
         setConfirmingVoter(voter);
@@ -190,6 +187,7 @@ export default function MarkVotes() {
             const boothName = booth ? `${booth.booth_no} - ${booth.name}` : 'Unknown Booth';
 
             sendTelegramAlert(TelegramAlerts.voteMarked(confirmingVoter.name, confirmingVoter.sl_no, districtName, constituencyName, boothName));
+            fetchVoters(currentPage); // refresh page counts
 
         } catch (error) {
             console.error('Error marking vote:', error);
@@ -361,8 +359,8 @@ export default function MarkVotes() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredVoters.length > 0 ? (
-                                            filteredVoters.map(voter => (
+                                        {voters.length > 0 ? (
+                                            voters.map(voter => (
                                                 <tr key={voter.id} style={{ background: voter.status === 'shifted' || voter.status === 'delete' ? '#f3f4f6' : 'white' }}>
                                                     <td style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{voter.sl_no}</td>
                                                     <td>
@@ -431,8 +429,8 @@ export default function MarkVotes() {
 
                                 {/* Mobile Tile View */}
                                 <div className="mobile-view">
-                                    {filteredVoters.length > 0 ? (
-                                        filteredVoters.map(voter => (
+                                    {voters.length > 0 ? (
+                                        voters.map(voter => (
                                             <div key={voter.id} className="voter-tile" style={{
                                                 background: voter.status === 'shifted' || voter.status === 'delete' ? '#f3f4f6' : 'white',
                                                 padding: '1rem',
@@ -514,6 +512,35 @@ export default function MarkVotes() {
                                     )}
                                 </div>
                             </div>
+
+                            {/* Pagination Controls */}
+                            {totalVoters > 0 && (
+                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', padding: '1.5rem 0', flexWrap: 'wrap' }}>
+                                    <button
+                                        onClick={() => handlePageChange(currentPage - 1)}
+                                        disabled={currentPage === 1 || loading}
+                                        style={{
+                                            padding: '0.5rem 1.2rem', borderRadius: '8px', border: '2px solid var(--primary)',
+                                            background: currentPage === 1 ? '#f0f0f0' : 'var(--primary)', color: currentPage === 1 ? '#999' : 'white',
+                                            cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '1.2rem'
+                                        }}
+                                    >‹</button>
+
+                                    <span style={{ fontSize: '0.95rem', color: '#555', fontWeight: '500' }}>
+                                        {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, totalVoters)} / {totalVoters} വോട്ടർമാർ
+                                    </span>
+
+                                    <button
+                                        onClick={() => handlePageChange(currentPage + 1)}
+                                        disabled={currentPage >= totalPages || loading}
+                                        style={{
+                                            padding: '0.5rem 1.2rem', borderRadius: '8px', border: '2px solid var(--primary)',
+                                            background: currentPage >= totalPages ? '#f0f0f0' : 'var(--primary)', color: currentPage >= totalPages ? '#999' : 'white',
+                                            cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '1.2rem'
+                                        }}
+                                    >›</button>
+                                </div>
+                            )}
                         </div>
                     )}
                 </>

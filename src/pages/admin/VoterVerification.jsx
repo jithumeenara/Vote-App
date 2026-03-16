@@ -28,6 +28,9 @@ export default function VoteVerification() {
     const [voteStatusFilter, setVoteStatusFilter] = useState('all');
     const [isAtTop, setIsAtTop] = useState(true);
     const [reportSubTab, setReportSubTab] = useState('detailed');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalVoters, setTotalVoters] = useState(0);
+    const PAGE_SIZE = 10;
 
     const isWardMember = user?.role === 'ward_member';
 
@@ -102,14 +105,16 @@ export default function VoteVerification() {
 
     useEffect(() => {
         if (selectedBooth) {
-            fetchVoters();
+            setCurrentPage(1);
+            fetchVoters(1);
         } else {
             setVoters([]);
+            setTotalVoters(0);
         }
         if (selectedDistrict || (isWardMember && user?.ward_id)) {
             fetchStats();
         }
-    }, [selectedBooth, selectedConstituency, selectedDistrict, activeTab, voteStatusFilter]);
+    }, [selectedBooth, selectedConstituency, selectedDistrict, activeTab, voteStatusFilter, verificationFilter, searchTerm]);
 
     // Real-time: re-fetch stats & voters when any voter record changes
     useEffect(() => {
@@ -135,19 +140,30 @@ export default function VoteVerification() {
         return () => { supabase.removeChannel(channel); };
     }, [selectedBooth, selectedConstituency]);
 
-    const fetchVoters = async () => {
+    const fetchVoters = async (page = currentPage) => {
         if (!selectedBooth) return;
         setLoading(true);
         try {
-            const { data, error } = await supabase
+            const from = (page - 1) * PAGE_SIZE;
+            const to = from + PAGE_SIZE - 1;
+
+            let query = supabase
                 .from('voters')
-                .select('*, fronts(name, color)')
+                .select('*, fronts(name, color)', { count: 'exact' })
                 .eq('booth_id', selectedBooth)
-                .order('sl_no')
-                .range(0, 9999);
+                .order('sl_no');
+
+            if (verificationFilter === 'verified') query = query.not('supported_front_id', 'is', null);
+            else if (verificationFilter === 'not_verified') query = query.is('supported_front_id', null);
+            if (voteStatusFilter === 'voted') query = query.eq('has_voted', true);
+            else if (voteStatusFilter === 'not_voted') query = query.eq('has_voted', false);
+            if (searchTerm.trim()) query = query.ilike('name', `%${searchTerm.trim()}%`);
+
+            const { data, error, count } = await query.range(from, to);
 
             if (error) throw error;
             setVoters(data || []);
+            setTotalVoters(count || 0);
         } catch (error) {
             console.error('Error fetching voters:', error);
             addToast('Error fetching voters', 'error');
@@ -278,22 +294,14 @@ export default function VoteVerification() {
         }
     };
 
-    const filteredVoters = voters.filter(v => {
-        // Verification Filter
-        if (verificationFilter === 'verified' && !v.supported_front_id) return false;
-        if (verificationFilter === 'not_verified' && v.supported_front_id) return false;
+    const totalPages = Math.ceil(totalVoters / PAGE_SIZE);
 
-        // Vote Status Filter
-        if (voteStatusFilter === 'voted' && !v.has_voted) return false;
-        if (voteStatusFilter === 'not_voted' && v.has_voted) return false;
-
-        const lowerTerm = searchTerm.toLowerCase();
-        return (
-            v.name.toLowerCase().includes(lowerTerm) ||
-            v.sl_no.toString().includes(lowerTerm) ||
-            (v.house_name && v.house_name.toLowerCase().includes(lowerTerm))
-        );
-    });
+    const handlePageChange = (newPage) => {
+        if (newPage < 1 || newPage > totalPages) return;
+        setCurrentPage(newPage);
+        fetchVoters(newPage);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
     return (
         <>
@@ -634,7 +642,7 @@ export default function VoteVerification() {
 
                         {loading ? <LoadingSpinner /> : (
                             <div className="grid">
-                                {filteredVoters.map(voter => (
+                                {voters.map(voter => (
                                     <div key={voter.id} className="card" style={{ padding: '1rem' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                                             <div>
@@ -705,6 +713,35 @@ export default function VoteVerification() {
                                         )}
                                     </div>
                                 ))}
+                            </div>
+                        )}
+
+                        {/* Pagination Controls */}
+                        {totalVoters > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', padding: '1.5rem 0', flexWrap: 'wrap' }}>
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1 || loading}
+                                    style={{
+                                        padding: '0.5rem 1.2rem', borderRadius: '8px', border: '2px solid var(--primary)',
+                                        background: currentPage === 1 ? '#f0f0f0' : 'var(--primary)', color: currentPage === 1 ? '#999' : 'white',
+                                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '1.2rem'
+                                    }}
+                                >‹</button>
+
+                                <span style={{ fontSize: '0.95rem', color: '#555', fontWeight: '500' }}>
+                                    {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, totalVoters)} / {totalVoters} വോട്ടർമാർ
+                                </span>
+
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage >= totalPages || loading}
+                                    style={{
+                                        padding: '0.5rem 1.2rem', borderRadius: '8px', border: '2px solid var(--primary)',
+                                        background: currentPage >= totalPages ? '#f0f0f0' : 'var(--primary)', color: currentPage >= totalPages ? '#999' : 'white',
+                                        cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '1.2rem'
+                                    }}
+                                >›</button>
                             </div>
                         )}
                     </>
