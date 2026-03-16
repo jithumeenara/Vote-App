@@ -129,7 +129,7 @@ export default function VoterStatusReports() {
                 }
             }
 
-            const { data, error } = await query;
+            const { data, error } = await query.range(0, 9999);
             if (error) throw error;
             setVoters(data || []);
         } catch (error) {

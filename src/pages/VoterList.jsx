@@ -32,7 +32,8 @@ export default function VoterList() {
                 .from('voters')
                 .select('*')
                 .eq('booth_id', boothId)
-                .order('sl_no');
+                .order('sl_no')
+                .range(0, 9999);
 
             if (error) throw error;
             setVoters(data || []);

@@ -326,7 +326,8 @@ export default function GenerateSlips() {
                     )
                 `)
                 .eq('booth_id', selectedBooth)
-                .order('sl_no');
+                .order('sl_no')
+                .range(0, 9999);
 
             if (error) throw error;
             setVoters(data);
@@ -451,7 +452,8 @@ export default function GenerateSlips() {
                                     )
                                 )
                             `)
-                            .in('booth_id', boothIds);
+                            .in('booth_id', boothIds)
+                            .range(0, 9999);
 
                         if (votersData) {
                             // Pre-process data for search: Add Manglish fields

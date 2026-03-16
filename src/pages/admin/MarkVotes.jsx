@@ -120,7 +120,8 @@ export default function MarkVotes() {
                 .from('voters')
                 .select('*')
                 .eq('booth_id', selectedBooth)
-                .order('sl_no');
+                .order('sl_no')
+                .range(0, 9999);
 
             if (error) throw error;
             setVoters(data);

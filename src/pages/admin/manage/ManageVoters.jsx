@@ -131,7 +131,7 @@ export default function ManageVoters() {
                 setVoters(data || []);
             } else {
                 // Standard Select for Admin
-                const { data, error } = await supabase.from('voters').select('*').eq('booth_id', boothId).order('sl_no');
+                const { data, error } = await supabase.from('voters').select('*').eq('booth_id', boothId).order('sl_no').range(0, 9999);
                 if (error) throw error;
                 setVoters(data || []);
             }
