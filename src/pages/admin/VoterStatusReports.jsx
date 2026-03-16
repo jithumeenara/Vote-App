@@ -129,9 +129,18 @@ export default function VoterStatusReports() {
                 }
             }
 
-            const { data, error } = await query.range(0, 9999);
-            if (error) throw error;
-            setVoters(data || []);
+            // Batch-fetch all rows (bypasses 1000-row Supabase limit)
+            const BATCH = 1000;
+            let all = [];
+            let offset = 0;
+            while (true) {
+                const { data, error } = await query.range(offset, offset + BATCH - 1);
+                if (error) throw error;
+                all = all.concat(data || []);
+                if (!data || data.length < BATCH) break;
+                offset += BATCH;
+            }
+            setVoters(all);
         } catch (error) {
             console.error('Error fetching voters:', error);
             addToast('Error fetching voters', 'error');

@@ -9,6 +9,7 @@ import Fuse from 'fuse.js';
 export default function VoterList() {
     const { boothId } = useParams();
     const [voters, setVoters] = useState([]);
+    const [totalCount, setTotalCount] = useState(0);
     const [boothDetails, setBoothDetails] = useState(null);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -27,16 +28,28 @@ export default function VoterList() {
                 .single();
             if (bData) setBoothDetails(bData);
 
-            // Fetch Voters
-            const { data, error } = await supabase
+            // Get total count first
+            const { count } = await supabase
                 .from('voters')
-                .select('*')
-                .eq('booth_id', boothId)
-                .order('sl_no')
-                .range(0, 9999);
+                .select('*', { count: 'exact', head: true })
+                .eq('booth_id', boothId);
+            setTotalCount(count || 0);
 
-            if (error) throw error;
-            setVoters(data || []);
+            // Fetch all voters in batches of 1000 (bypasses Supabase row limit)
+            const BATCH = 1000;
+            const batches = Math.ceil((count || 0) / BATCH);
+            let all = [];
+            for (let i = 0; i < batches; i++) {
+                const { data, error } = await supabase
+                    .from('voters')
+                    .select('*')
+                    .eq('booth_id', boothId)
+                    .order('sl_no')
+                    .range(i * BATCH, (i + 1) * BATCH - 1);
+                if (error) throw error;
+                all = all.concat(data || []);
+            }
+            setVoters(all);
         } catch (error) {
             console.error('Error fetching voters:', error.message);
         } finally {
@@ -139,7 +152,7 @@ export default function VoterList() {
                         boxShadow: '0 2px 4px rgba(55, 17, 32, 0.05)'
                     }}>
                         <User size={18} style={{ color: 'var(--primary)' }} />
-                        {voters.length} വോട്ടർമാർ
+                        {totalCount} വോട്ടർമാർ
                     </div>
 
                     {boothDetails?.contact_number && (

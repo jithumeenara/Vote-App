@@ -312,26 +312,24 @@ export default function GenerateSlips() {
         if (!selectedBooth) return;
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('voters')
-                .select(`
-                    *,
-                    booths (
-                        name,
-                        booth_no,
-                        constituencies (
-                            constituency_no,
-                            name
-                        )
-                    )
-                `)
-                .eq('booth_id', selectedBooth)
-                .order('sl_no')
-                .range(0, 9999);
-
-            if (error) throw error;
-            setVoters(data);
-            setFilteredVoters(data);
+            // Batch-fetch all voters (bypasses 1000-row limit)
+            const BATCH = 1000;
+            let all = [];
+            let offset = 0;
+            while (true) {
+                const { data, error } = await supabase
+                    .from('voters')
+                    .select(`*, booths(name, booth_no, constituencies(constituency_no, name))`)
+                    .eq('booth_id', selectedBooth)
+                    .order('sl_no')
+                    .range(offset, offset + BATCH - 1);
+                if (error) throw error;
+                all = all.concat(data || []);
+                if (!data || data.length < BATCH) break;
+                offset += BATCH;
+            }
+            setVoters(all);
+            setFilteredVoters(all);
         } catch (error) {
             console.error('Error fetching voters:', error);
             alert('Error fetching voters');
@@ -438,24 +436,22 @@ export default function GenerateSlips() {
                 if (boothsData) {
                     const boothIds = boothsData.map(b => b.id);
                     if (boothIds.length > 0) {
-                        const { data: votersData } = await supabase
-                            .from('voters')
-                            .select(`
-                                *,
-                                booths (
-                                    name,
-                                    booth_no,
-                                    constituencies (
-                                        constituency_no,
-                                        name,
-                                        id
-                                    )
-                                )
-                            `)
-                            .in('booth_id', boothIds)
-                            .range(0, 9999);
+                        // Batch-fetch all voters (bypasses 1000-row limit)
+                        const BATCH = 1000;
+                        let votersData = [];
+                        let offset = 0;
+                        while (true) {
+                            const { data: batch } = await supabase
+                                .from('voters')
+                                .select(`*, booths(name, booth_no, constituencies(constituency_no, name, id))`)
+                                .in('booth_id', boothIds)
+                                .range(offset, offset + BATCH - 1);
+                            votersData = votersData.concat(batch || []);
+                            if (!batch || batch.length < BATCH) break;
+                            offset += BATCH;
+                        }
 
-                        if (votersData) {
+                        if (votersData.length > 0) {
                             // Pre-process data for search: Add Manglish fields
                             const processedVoters = votersData.map(v => {
                                 const safeName = v.name || '';
