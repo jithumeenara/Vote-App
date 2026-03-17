@@ -28,6 +28,8 @@ export default function MarkVotes() {
 
     const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'voted'
     const [confirmingVoter, setConfirmingVoter] = useState(null);
+    const [votedCount, setVotedCount] = useState(0);
+    const [pendingCount, setPendingCount] = useState(0);
 
     const isWardMember = user?.role === 'ward_member';
     const isBoothMember = user?.role === 'booth_member';
@@ -134,11 +136,25 @@ export default function MarkVotes() {
         if (selectedBooth) {
             setCurrentPage(1);
             fetchVoters(1);
+            fetchCounts();
         } else {
             setVoters([]);
             setTotalVoters(0);
+            setVotedCount(0);
+            setPendingCount(0);
         }
     }, [selectedBooth, activeTab, searchTerm]);
+
+    const fetchCounts = async () => {
+        if (!selectedBooth) return;
+        const base = () => supabase.from('voters').select('*', { count: 'exact', head: true }).eq('booth_id', selectedBooth);
+        const [voted, pending] = await Promise.all([
+            base().eq('has_voted', true),
+            base().eq('has_voted', false).neq('status', 'deleted').neq('status', 'shifted'),
+        ]);
+        setVotedCount(voted.count || 0);
+        setPendingCount(pending.count || 0);
+    };
 
     const fetchVoters = async (page = currentPage, size = pageSize) => {
         if (!selectedBooth) return;
@@ -224,7 +240,8 @@ export default function MarkVotes() {
             const boothName = booth ? `${booth.booth_no} - ${booth.name}` : 'Unknown Booth';
 
             sendTelegramAlert(TelegramAlerts.voteMarked(confirmingVoter.name, confirmingVoter.sl_no, districtName, constituencyName, boothName));
-            fetchVoters(currentPage); // refresh page counts
+            fetchVoters(currentPage); // refresh page
+            fetchCounts(); // refresh stat cards
 
         } catch (error) {
             console.error('Error marking vote:', error);
@@ -246,6 +263,7 @@ export default function MarkVotes() {
                 .eq('id', voterId);
 
             if (error) throw error;
+            fetchCounts(); // refresh stat cards
         } catch (error) {
             console.error('Error undoing vote:', error);
             addToast('Failed to undo vote. Reverting...', 'error');
@@ -354,13 +372,13 @@ export default function MarkVotes() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                         <div className="card" style={{ padding: '1rem', textAlign: 'center', background: '#dcfce7', border: '1px solid #bbf7d0' }}>
                             <h3 style={{ margin: 0, fontSize: '1.5rem', color: '#166534' }}>
-                                {voters.filter(v => v.has_voted).length}
+                                {votedCount}
                             </h3>
                             <p style={{ margin: 0, fontSize: '0.9rem', color: '#166534', fontWeight: '600' }}>വോട്ട് ചെയ്തവർ</p>
                         </div>
                         <div className="card" style={{ padding: '1rem', textAlign: 'center', background: '#f3e8ff', border: '1px solid #d8b4fe' }}>
                             <h3 style={{ margin: 0, fontSize: '1.5rem', color: '#6b21a8' }}>
-                                {voters.filter(v => !v.has_voted && v.status !== 'deleted' && v.status !== 'shifted').length}
+                                {pendingCount}
                             </h3>
                             <p style={{ margin: 0, fontSize: '0.9rem', color: '#6b21a8', fontWeight: '600' }}>വോട്ട് ചെയ്യാനുള്ളവർ</p>
                         </div>
