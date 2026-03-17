@@ -120,19 +120,81 @@ const VoterSlipItem = React.memo(({ voter, isSelected, onToggle, candidatePhoto,
                             <td className="slip-middle">
                                 <div className="slip-row"><span className="slip-label">പേര്</span><span className="slip-colon">:</span><span className="slip-value bold">{voter.name}</span></div>
                                 <div className="slip-row"><span className="slip-label">രക്ഷിതാവിന്റെ പേര്</span><span className="slip-colon">:</span><span className="slip-value">{voter.guardian_name}</span></div>
-                                <div className="slip-row"><span className="slip-label">മണ്ഡലം നമ്പർ/വീട്</span><span className="slip-colon">:</span><span className="slip-value">{voter.booths?.constituencies?.constituency_no}/{voter.house_no}</span></div>
-                                <div className="slip-row"><span className="slip-label">വീട്ടുപേര്</span><span className="slip-colon">:</span><span className="slip-value">{voter.house_name}</span></div>
+                                <div className="slip-row"><span className="slip-label">വീട്ടുനമ്പർ/വീട്</span><span className="slip-colon">:</span><span className="slip-value">{voter.booths?.constituencies?.constituency_no}/{voter.house_no} {voter.house_name}</span></div>
                                 <div className="slip-row"><span className="slip-label">ലിംഗം/വയസ്</span><span className="slip-colon">:</span><span className="slip-value">{voter.gender === 'Male' || voter.gender === 'പുരുഷൻ' ? 'M' : 'F'} / {voter.age}</span></div>
                                 <div className="slip-row"><span className="slip-label">പോളിംഗ് സ്റ്റേഷൻ</span><span className="slip-colon">:</span><span className="slip-value">{voter.booths?.booth_no} / {voter.booths?.name}</span></div>
                                 <div className="slip-row"><span className="slip-label">SEC ID No</span><span className="slip-colon">:</span><span className="slip-value">{voter.id_card_no}</span></div>
                             </td>
-                            <td className="slip-right">
+                            <td className="slip-right" style={{ textAlign: 'center', verticalAlign: 'middle' }}>
                                 <div className="slip-sn-label">ക്രമ നമ്പർ</div>
                                 <div className="slip-sn-value">{voter.sl_no}</div>
                             </td>
                         </tr>
                     </tbody>
                 </table>
+                {(voter.status === 'delete' || voter.status === 'shifted') && (
+                    <div className="watermark-container"><div className="stamp-box"><div className="stamp-text">{voter.status === 'delete' ? 'DELETE' : 'SHIFTED'}</div></div></div>
+                )}
+            </div>
+        );
+    }
+
+    // Compact Template — small, modern, minimal
+    if (template === 'compact') {
+        const isMale = voter.gender === 'Male' || voter.gender === 'പുരുഷൻ' || voter.gender === 'M';
+        return (
+            <div id={`slip-${voter.id}`} className={`voter-slip-container ${isSelected ? 'selected' : ''}`} style={{ marginBottom: '10px' }}>
+                <div className="no-print slip-actions ignore-in-image" style={{ position: 'absolute', top: '4px', right: '4px', zIndex: 100, display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <button onClick={handleShare} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '3px', display: 'flex', alignItems: 'center' }}>
+                        <Share size={15} />
+                    </button>
+                    <label className="modern-checkbox">
+                        <input type="checkbox" checked={isSelected} onChange={() => onToggle(voter.id)} />
+                        <span className="checkmark"></span>
+                    </label>
+                </div>
+
+                <div style={{
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    background: '#fff',
+                    display: 'flex',
+                    alignItems: 'stretch',
+                    overflow: 'hidden',
+                    fontSize: '0.78rem',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                    minHeight: '72px',
+                }}>
+                    {/* Left color bar + photos */}
+                    <div style={{ background: 'var(--primary-bg)', width: '56px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '6px 4px' }}>
+                        {candidatePhoto
+                            ? <img src={candidatePhoto} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #fff' }} />
+                            : <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', color: '#fff' }}>ഫോട്ടോ</div>}
+                        {symbolPreview
+                            ? <img src={symbolPreview} alt="" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
+                            : <div style={{ width: '24px', height: '24px', background: 'rgba(255,255,255,0.15)', borderRadius: '4px' }} />}
+                    </div>
+
+                    {/* Center info */}
+                    <div style={{ flex: 1, padding: '7px 10px', borderRight: '1px solid #e5e7eb' }}>
+                        <div style={{ fontWeight: '700', fontSize: '0.88rem', color: '#111', marginBottom: '3px', lineHeight: 1.2 }}>{voter.name}</div>
+                        <div style={{ color: '#6b7280', marginBottom: '2px' }}>{voter.guardian_name}</div>
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', color: '#374151' }}>
+                            <span>🏠 {voter.house_no} {voter.house_name}</span>
+                            <span>{isMale ? 'M' : 'F'} / {voter.age}</span>
+                        </div>
+                        <div style={{ color: '#9ca3af', fontSize: '0.72rem', marginTop: '2px' }}>
+                            {voter.booths?.booth_no} - {voter.booths?.name} &nbsp;|&nbsp; <strong style={{ color: '#374151' }}>{voter.id_card_no}</strong>
+                        </div>
+                    </div>
+
+                    {/* Right SL No */}
+                    <div style={{ width: '52px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f9fafb' }}>
+                        <div style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>No</div>
+                        <div style={{ fontSize: '1.6rem', fontWeight: '900', color: 'var(--primary-bg)', lineHeight: 1 }}>{voter.sl_no}</div>
+                    </div>
+                </div>
+
                 {(voter.status === 'delete' || voter.status === 'shifted') && (
                     <div className="watermark-container"><div className="stamp-box"><div className="stamp-text">{voter.status === 'delete' ? 'DELETE' : 'SHIFTED'}</div></div></div>
                 )}
@@ -703,6 +765,7 @@ export default function GenerateSlips() {
                                         style={{ padding: '0.5rem', width: '100%' }}
                                     >
                                         <option value="classic">Classic Template</option>
+                                        <option value="compact">Compact Template (Small)</option>
                                         <option value="modern">Modern Template</option>
                                     </select>
                                 </div>
