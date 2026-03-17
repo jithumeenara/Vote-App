@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -10,10 +10,24 @@ export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const { signIn, wardLogin, boothLogin } = useAuth();
+    const { signIn, wardLogin, boothLogin, signOut, user } = useAuth();
     const { addToast } = useToast();
     const navigate = useNavigate();
     const location = useLocation();
+
+    // If a logged-in ward/booth user lands on login, redirect them to their dashboard
+    // If an admin user lands on login (e.g. pressed Back), auto-logout for security
+    useEffect(() => {
+        if (!user) return;
+        if (user.role === 'booth_member') {
+            navigate('/booth', { replace: true });
+        } else if (user.role === 'ward_member') {
+            navigate('/admin', { replace: true });
+        } else {
+            // Admin user on login page — sign out immediately for security
+            signOut();
+        }
+    }, [user]);
 
     const from = location.state?.from?.pathname || (loginType === 'booth' ? '/booth' : '/admin');
 
