@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Shield, Menu, X } from 'lucide-react';
+import { useAuth } from './context/AuthContext';
 import Home from './pages/Home';
 import DistrictList from './pages/DistrictList';
 import ConstituencyList from './pages/ConstituencyList';
@@ -35,6 +36,16 @@ import BoothDashboard from './pages/booth/BoothDashboard';
 function Layout({ children }) {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const location = useLocation();
+  const { user } = useAuth();
+
+  // Determine correct dashboard link based on role
+  const isBoothMember = user?.role === 'booth_member';
+  const isWardMember = user?.role === 'ward_member';
+  const dashboardPath = isBoothMember ? '/booth' : '/admin';
+  const dashboardLabel = isBoothMember ? 'ഡാഷ്‌ബോർഡ്' : isWardMember ? 'ഡാഷ്‌ബോർഡ്' : 'അഡ്മിൻ';
+  const isOnDashboard = isBoothMember
+    ? location.pathname.startsWith('/booth')
+    : location.pathname.startsWith('/admin');
 
   return (
     <div className="app">
@@ -48,7 +59,14 @@ function Layout({ children }) {
 
           <nav className={`nav-links`}>
             <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>ഹോം</Link>
-            <Link to="/admin" className={`nav-link ${location.pathname.startsWith('/admin') ? 'active' : ''}`}>അഡ്മിൻ</Link>
+            {user && (
+              <Link to={dashboardPath} className={`nav-link ${isOnDashboard ? 'active' : ''}`}>
+                {dashboardLabel}
+              </Link>
+            )}
+            {!user && (
+              <Link to="/admin" className={`nav-link ${location.pathname.startsWith('/admin') ? 'active' : ''}`}>അഡ്മിൻ</Link>
+            )}
           </nav>
         </div>
       </header>
@@ -82,67 +100,82 @@ function App() {
               <Route path="/constituency/:constituencyId" element={<BoothList />} />
               <Route path="/booth/:boothId" element={<VoterList />} />
 
-              {/* Protected Admin Routes */}
+              {/* Admin-only Routes (blocked for booth/ward members) */}
               <Route path="/admin" element={
-                <ProtectedRoute>
+                <ProtectedRoute adminOnly>
                   <AdminDashboard />
                 </ProtectedRoute>
               } />
               <Route path="/admin/add-district" element={
-                <ProtectedRoute>
+                <ProtectedRoute adminOnly>
                   <AddDistrict />
                 </ProtectedRoute>
               } />
               <Route path="/admin/add-constituency" element={
-                <ProtectedRoute>
+                <ProtectedRoute adminOnly>
                   <AddConstituency />
                 </ProtectedRoute>
               } />
               <Route path="/admin/add-booth" element={
-                <ProtectedRoute>
+                <ProtectedRoute adminOnly>
                   <AddBooth />
                 </ProtectedRoute>
               } />
               <Route path="/admin/add-candidate" element={
-                <ProtectedRoute>
+                <ProtectedRoute adminOnly>
                   <AddCandidate />
                 </ProtectedRoute>
               } />
+              <Route path="/admin/settings" element={
+                <ProtectedRoute adminOnly>
+                  <Settings />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/manage/districts" element={
+                <ProtectedRoute adminOnly>
+                  <ManageDistricts />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/manage/constituencies" element={
+                <ProtectedRoute adminOnly>
+                  <ManageConstituencies />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/manage/booths" element={
+                <ProtectedRoute adminOnly>
+                  <ManageBooths />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/manage/candidates" element={
+                <ProtectedRoute adminOnly>
+                  <ManageCandidates />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/manage/members" element={
+                <ProtectedRoute adminOnly>
+                  <ManageWardMembers />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/manage/fronts" element={
+                <ProtectedRoute adminOnly>
+                  <ManageFronts />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/manage/booth-members" element={
+                <ProtectedRoute adminOnly>
+                  <ManageBoothMembers />
+                </ProtectedRoute>
+              } />
+
+              {/* Shared feature routes (booth + ward + admin) */}
               <Route path="/admin/upload-voters" element={
                 <ProtectedRoute>
                   <UploadVoters />
                 </ProtectedRoute>
               } />
-
-              {/* Protected Manage Routes */}
-              <Route path="/admin/manage/districts" element={
-                <ProtectedRoute>
-                  <ManageDistricts />
-                </ProtectedRoute>
-              } />
-              <Route path="/admin/manage/constituencies" element={
-                <ProtectedRoute>
-                  <ManageConstituencies />
-                </ProtectedRoute>
-              } />
-              <Route path="/admin/manage/booths" element={
-                <ProtectedRoute>
-                  <ManageBooths />
-                </ProtectedRoute>
-              } />
-              <Route path="/admin/manage/candidates" element={
-                <ProtectedRoute>
-                  <ManageCandidates />
-                </ProtectedRoute>
-              } />
               <Route path="/admin/manage/voters" element={
                 <ProtectedRoute>
                   <ManageVoters />
-                </ProtectedRoute>
-              } />
-              <Route path="/admin/manage/members" element={
-                <ProtectedRoute>
-                  <ManageWardMembers />
                 </ProtectedRoute>
               } />
               <Route path="/admin/reports" element={
@@ -155,11 +188,6 @@ function App() {
                   <GenerateSlips />
                 </ProtectedRoute>
               } />
-              <Route path="/admin/settings" element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              } />
               <Route path="/admin/mark-votes" element={
                 <ProtectedRoute>
                   <MarkVotes />
@@ -170,19 +198,9 @@ function App() {
                   <VoterVerification />
                 </ProtectedRoute>
               } />
-              <Route path="/admin/manage/fronts" element={
-                <ProtectedRoute>
-                  <ManageFronts />
-                </ProtectedRoute>
-              } />
               <Route path="/admin/voter-status-reports" element={
                 <ProtectedRoute>
                   <VoterStatusReports />
-                </ProtectedRoute>
-              } />
-              <Route path="/admin/manage/booth-members" element={
-                <ProtectedRoute>
-                  <ManageBoothMembers />
                 </ProtectedRoute>
               } />
 
