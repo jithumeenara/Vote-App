@@ -691,8 +691,11 @@ export default function VoteVerification() {
                                                     </span>
                                                     <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{voter.name}</h3>
                                                 </div>
-                                                <div style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.25rem' }}>
-                                                    {voter.house_name} | Age: {voter.age}
+                                                <div style={{ fontSize: '0.85rem', color: '#555', marginTop: '0.25rem' }}>
+                                                    {voter.guardian_name}
+                                                </div>
+                                                <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '0.15rem' }}>
+                                                    {voter.house_no ? `No: ${voter.house_no}` : ''}{voter.house_name ? ` / ${voter.house_name}` : ''} | {voter.gender === 'Male' || voter.gender === 'പുരുഷൻ' || voter.gender === 'M' ? 'M' : 'F'} / {voter.age}
                                                 </div>
                                             </div>
                                         </div>
