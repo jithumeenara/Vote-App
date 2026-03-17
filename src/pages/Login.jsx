@@ -6,7 +6,7 @@ import { sendTelegramAlert, TelegramAlerts } from '../lib/telegram';
 import { Lock, Mail, Key, User } from 'lucide-react';
 
 export default function Login() {
-    const [loginType, setLoginType] = useState('ward'); // 'admin', 'ward', or 'booth'
+    const [loginType, setLoginType] = useState('booth'); // 'admin', 'ward', or 'booth'
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
