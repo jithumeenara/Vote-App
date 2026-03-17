@@ -135,7 +135,7 @@ export default function VoteVerification() {
             setVoters([]);
             setTotalVoters(0);
         }
-        if (selectedDistrict || (isWardMember && user?.ward_id)) {
+        if (selectedDistrict || (isWardMember && user?.ward_id) || (isBoothMember && selectedBooth)) {
             fetchStats();
         }
     }, [selectedBooth, selectedConstituency, selectedDistrict, activeTab, voteStatusFilter, verificationFilter, searchTerm]);
@@ -207,9 +207,11 @@ export default function VoteVerification() {
         if (!forceRun && activeTab !== 'trend') return;
         setLoading(true);
         try {
-            // Always use constituency-level for trend stats (ignore booth filter)
             let bIds = [];
-            if (selectedConstituency) {
+            // Booth member: always scope to their single booth only
+            if (isBoothMember && selectedBooth) {
+                bIds = [selectedBooth];
+            } else if (selectedConstituency) {
                 const { data: bData } = await supabase.from('booths').select('id').eq('constituency_id', selectedConstituency);
                 bIds = (bData || []).map(b => b.id);
             } else if (selectedBooth) {
@@ -771,7 +773,7 @@ export default function VoteVerification() {
                 {
                     activeTab === 'trend' && (
                         <div className="trend-section">
-                            <div className="card" style={{ padding: '1rem', marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            {!isBoothMember && <div className="card" style={{ padding: '1rem', marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <span style={{ color: '#666', fontSize: '0.9rem' }}>Filter By:</span>
                                     <select
@@ -790,7 +792,7 @@ export default function VoteVerification() {
                                         <option value="not_voted">വോട്ട് ചെയ്യാത്തവർ (Not Voted)</option>
                                     </select>
                                 </div>
-                            </div>
+                            </div>}
 
                             {loading ? <LoadingSpinner /> : stats ? (
                                 <div className="grid grid-2">

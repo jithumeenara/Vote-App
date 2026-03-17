@@ -39,11 +39,14 @@ export default function ManageVoters() {
     const [filterStatus, setFilterStatus] = useState('');
 
     const isWardMember = user?.role === 'ward_member';
+    const isBoothMember = user?.role === 'booth_member';
 
     useEffect(() => {
-        fetchDistricts();
+        if (!isBoothMember) fetchDistricts();
         if (isWardMember && user?.ward_id) {
             fetchUserConstituencyDetails();
+        } else if (isBoothMember && user?.booth_id) {
+            fetchUserBoothDetails();
         }
     }, [user]);
 
@@ -57,6 +60,23 @@ export default function ManageVoters() {
         if (data) {
             setSelectedDistrict(data.district_id);
             setSelectedConstituency(data.id);
+        }
+    }
+
+    async function fetchUserBoothDetails() {
+        const { data } = await supabase
+            .from('booths')
+            .select('*, constituencies(*, districts(*))')
+            .eq('id', user.booth_id)
+            .single();
+
+        if (data) {
+            setDistricts([data.constituencies.districts]);
+            setConstituencies([data.constituencies]);
+            setBooths([data]);
+            setSelectedDistrict(data.constituencies.district_id);
+            setSelectedConstituency(data.constituency_id);
+            setSelectedBooth(data.id);
         }
     }
 
@@ -268,6 +288,7 @@ export default function ManageVoters() {
             <h2 style={{ marginBottom: '2rem', color: 'var(--primary-bg)' }}>വോട്ടർമാരെ നിയന്ത്രിക്കുക</h2>
 
             <div style={{ marginBottom: '2rem' }}>
+                {!isBoothMember && <>
                 <div className="grid grid-2" style={{ marginBottom: '1rem' }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                         <label className="label">ജില്ല</label>
@@ -334,6 +355,7 @@ export default function ManageVoters() {
                         </select>
                     </div>
                 </div>
+                </>}
             </div>
 
             {selectedBooth && (
