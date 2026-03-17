@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Pagination from '../../components/Pagination';
@@ -34,6 +34,21 @@ export default function VoteVerification() {
     const [pageSize, setPageSize] = useState(10);
 
     const isWardMember = user?.role === 'ward_member';
+
+    // Swipe support for tabs
+    const TABS = ['trend', 'verification', 'reports'];
+    const touchStartX = useRef(null);
+    const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
+    const handleTouchEnd = (e) => {
+        if (touchStartX.current === null) return;
+        const diff = touchStartX.current - e.changedTouches[0].clientX;
+        if (Math.abs(diff) > 50) {
+            const idx = TABS.indexOf(activeTab);
+            if (diff > 0 && idx < TABS.length - 1) setActiveTab(TABS[idx + 1]);
+            else if (diff < 0 && idx > 0) setActiveTab(TABS[idx - 1]);
+        }
+        touchStartX.current = null;
+    };
     const isBoothMember = user?.role === 'booth_member';
 
     useEffect(() => {
@@ -389,53 +404,38 @@ export default function VoteVerification() {
                     </div>
                 </div>}
 
-                {/* Tabs */}
-                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '2px solid #eee' }}>
-                    <button
-                        className={`tab-btn ${activeTab === 'trend' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('trend')}
-                        style={{
-                            padding: '0.75rem 1.5rem',
-                            border: 'none',
-                            background: 'none',
-                            borderBottom: activeTab === 'trend' ? '3px solid var(--accent)' : '3px solid transparent',
-                            color: activeTab === 'trend' ? 'var(--accent)' : '#666',
-                            fontWeight: 'bold',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        Current Trend (Reports)
-                    </button>
-                    <button
-                        className={`tab-btn ${activeTab === 'verification' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('verification')}
-                        style={{
-                            padding: '0.75rem 1.5rem',
-                            border: 'none',
-                            background: 'none',
-                            borderBottom: activeTab === 'verification' ? '3px solid var(--primary)' : '3px solid transparent',
-                            color: activeTab === 'verification' ? 'var(--primary)' : '#666',
-                            fontWeight: 'bold',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        Verification List
-                    </button>
-                    <button
-                        className={`tab-btn ${activeTab === 'reports' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('reports')}
-                        style={{
-                            padding: '0.75rem 1.5rem',
-                            border: 'none',
-                            background: 'none',
-                            borderBottom: activeTab === 'reports' ? '3px solid var(--primary)' : '3px solid transparent',
-                            color: activeTab === 'reports' ? 'var(--primary)' : '#666',
-                            fontWeight: 'bold',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        Reports
-                    </button>
+                {/* Modern Pill Tabs with swipe support */}
+                <div
+                    style={{ background: '#f1f5f9', borderRadius: '14px', padding: '4px', display: 'flex', marginBottom: '1.5rem', gap: '2px' }}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                >
+                    {[
+                        { id: 'trend', label: 'ട്രെൻഡ്', color: 'var(--accent)' },
+                        { id: 'verification', label: 'വെരിഫിക്കേഷൻ', color: 'var(--primary)' },
+                        { id: 'reports', label: 'റിപ്പോർട്ട്', color: 'var(--primary)' },
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            style={{
+                                flex: 1,
+                                padding: '0.6rem 0.4rem',
+                                border: 'none',
+                                borderRadius: '10px',
+                                background: activeTab === tab.id ? 'white' : 'transparent',
+                                color: activeTab === tab.id ? tab.color : '#6b7280',
+                                fontWeight: activeTab === tab.id ? '700' : '500',
+                                fontSize: 'clamp(0.72rem, 2.8vw, 0.88rem)',
+                                cursor: 'pointer',
+                                boxShadow: activeTab === tab.id ? '0 1px 6px rgba(0,0,0,0.12)' : 'none',
+                                transition: 'all 0.2s ease',
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
                 </div>
 
                 {activeTab === 'reports' && (
@@ -497,45 +497,79 @@ export default function VoteVerification() {
 
                                 {reportSubTab === 'summary' ? (
                                     <div className="report-content">
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
-                                            <thead>
-                                                <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #eee' }}>
-                                                    <th style={{ padding: '1rem', textAlign: 'left' }}>മുന്നണി (Front)</th>
-                                                    <th style={{ padding: '1rem', textAlign: 'center' }}>Total Supporters</th>
-                                                    <th style={{ padding: '1rem', textAlign: 'center' }}>Voted</th>
-                                                    <th style={{ padding: '1rem', textAlign: 'center' }}>Not Voted</th>
-                                                    <th style={{ padding: '1rem', textAlign: 'center' }}>Percentage</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {fronts.map(front => {
-                                                    const supporters = voters.filter(v => v.supported_front_id === front.id);
-                                                    const voted = supporters.filter(v => v.has_voted).length;
-                                                    const notVoted = supporters.length - voted;
-                                                    const percentage = supporters.length > 0 ? ((voted / supporters.length) * 100).toFixed(1) : 0;
-
-                                                    return (
-                                                        <tr key={front.id} style={{ borderBottom: '1px solid #eee' }}>
-                                                            <td style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: front.color || '#666' }}></div>
-                                                                <span style={{ fontWeight: '500' }}>{front.name}</span>
-                                                            </td>
-                                                            <td style={{ padding: '1rem', textAlign: 'center' }}>{supporters.length}</td>
-                                                            <td style={{ padding: '1rem', textAlign: 'center', color: '#10b981', fontWeight: 'bold' }}>{voted}</td>
-                                                            <td style={{ padding: '1rem', textAlign: 'center', color: '#ef4444' }}>{notVoted}</td>
-                                                            <td style={{ padding: '1rem', textAlign: 'center' }}>{percentage}%</td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                                <tr style={{ background: '#f8fafc', fontWeight: 'bold' }}>
-                                                    <td style={{ padding: '1rem' }}>Total</td>
-                                                    <td style={{ padding: '1rem', textAlign: 'center' }}>{voters.filter(v => v.supported_front_id).length}</td>
-                                                    <td style={{ padding: '1rem', textAlign: 'center', color: '#10b981' }}>{voters.filter(v => v.supported_front_id && v.has_voted).length}</td>
-                                                    <td style={{ padding: '1rem', textAlign: 'center', color: '#ef4444' }}>{voters.filter(v => v.supported_front_id && !v.has_voted).length}</td>
-                                                    <td style={{ padding: '1rem', textAlign: 'center' }}>-</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
+                                        {/* Desktop table */}
+                                        <div className="desktop-view">
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
+                                                <thead>
+                                                    <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #eee' }}>
+                                                        <th style={{ padding: '1rem', textAlign: 'left' }}>മുന്നണി</th>
+                                                        <th style={{ padding: '1rem', textAlign: 'center' }}>Total</th>
+                                                        <th style={{ padding: '1rem', textAlign: 'center' }}>Voted</th>
+                                                        <th style={{ padding: '1rem', textAlign: 'center' }}>Not Voted</th>
+                                                        <th style={{ padding: '1rem', textAlign: 'center' }}>%</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {fronts.map(front => {
+                                                        const supporters = voters.filter(v => v.supported_front_id === front.id);
+                                                        const voted = supporters.filter(v => v.has_voted).length;
+                                                        const notVoted = supporters.length - voted;
+                                                        const percentage = supporters.length > 0 ? ((voted / supporters.length) * 100).toFixed(1) : 0;
+                                                        return (
+                                                            <tr key={front.id} style={{ borderBottom: '1px solid #eee' }}>
+                                                                <td style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                    <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: front.color || '#666' }}></div>
+                                                                    <span style={{ fontWeight: '500' }}>{front.name}</span>
+                                                                </td>
+                                                                <td style={{ padding: '1rem', textAlign: 'center' }}>{supporters.length}</td>
+                                                                <td style={{ padding: '1rem', textAlign: 'center', color: '#10b981', fontWeight: 'bold' }}>{voted}</td>
+                                                                <td style={{ padding: '1rem', textAlign: 'center', color: '#ef4444' }}>{notVoted}</td>
+                                                                <td style={{ padding: '1rem', textAlign: 'center' }}>{percentage}%</td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                    <tr style={{ background: '#f8fafc', fontWeight: 'bold' }}>
+                                                        <td style={{ padding: '1rem' }}>Total</td>
+                                                        <td style={{ padding: '1rem', textAlign: 'center' }}>{voters.filter(v => v.supported_front_id).length}</td>
+                                                        <td style={{ padding: '1rem', textAlign: 'center', color: '#10b981' }}>{voters.filter(v => v.supported_front_id && v.has_voted).length}</td>
+                                                        <td style={{ padding: '1rem', textAlign: 'center', color: '#ef4444' }}>{voters.filter(v => v.supported_front_id && !v.has_voted).length}</td>
+                                                        <td style={{ padding: '1rem', textAlign: 'center' }}>-</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        {/* Mobile tiles */}
+                                        <div className="mobile-view" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
+                                            {fronts.map(front => {
+                                                const supporters = voters.filter(v => v.supported_front_id === front.id);
+                                                const voted = supporters.filter(v => v.has_voted).length;
+                                                const notVoted = supporters.length - voted;
+                                                const percentage = supporters.length > 0 ? ((voted / supporters.length) * 100).toFixed(1) : 0;
+                                                return (
+                                                    <div key={front.id} style={{ border: `2px solid ${front.color || '#e5e7eb'}`, borderRadius: '12px', padding: '1rem', background: front.color ? `${front.color}08` : '#fff' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                                                            <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: front.color || '#666' }} />
+                                                            <span style={{ fontWeight: '700', fontSize: '1rem', color: front.color || '#333' }}>{front.name}</span>
+                                                            <span style={{ marginLeft: 'auto', background: '#f1f5f9', padding: '2px 8px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '600' }}>{percentage}%</span>
+                                                        </div>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', textAlign: 'center' }}>
+                                                            <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '0.5rem' }}>
+                                                                <div style={{ fontSize: '1.3rem', fontWeight: '800' }}>{supporters.length}</div>
+                                                                <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>Total</div>
+                                                            </div>
+                                                            <div style={{ background: '#dcfce7', borderRadius: '8px', padding: '0.5rem' }}>
+                                                                <div style={{ fontSize: '1.3rem', fontWeight: '800', color: '#16a34a' }}>{voted}</div>
+                                                                <div style={{ fontSize: '0.7rem', color: '#16a34a' }}>Voted</div>
+                                                            </div>
+                                                            <div style={{ background: '#fee2e2', borderRadius: '8px', padding: '0.5rem' }}>
+                                                                <div style={{ fontSize: '1.3rem', fontWeight: '800', color: '#dc2626' }}>{notVoted}</div>
+                                                                <div style={{ fontSize: '0.7rem', color: '#dc2626' }}>Pending</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
                                 ) : (
                                     <div className="report-content">
@@ -555,7 +589,8 @@ export default function VoteVerification() {
                                                     }}>
                                                         {front.name} ({frontVoters.length})
                                                     </h4>
-                                                    <div style={{ overflowX: 'auto' }}>
+                                                                    {/* Desktop table */}
+                                                    <div className="desktop-view" style={{ overflowX: 'auto' }}>
                                                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                                                             <thead>
                                                                 <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #eee' }}>
@@ -567,7 +602,7 @@ export default function VoteVerification() {
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
-                                                                {frontVoters.map((voter, idx) => (
+                                                                {frontVoters.map((voter) => (
                                                                     <tr key={voter.id} style={{ borderBottom: '1px solid #eee' }}>
                                                                         <td style={{ padding: '0.75rem' }}>{voter.sl_no}</td>
                                                                         <td style={{ padding: '0.75rem', fontWeight: '500' }}>{voter.name}</td>
@@ -580,6 +615,21 @@ export default function VoteVerification() {
                                                                 ))}
                                                             </tbody>
                                                         </table>
+                                                    </div>
+                                                    {/* Mobile tiles */}
+                                                    <div className="mobile-view" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                                        {frontVoters.map((voter) => (
+                                                            <div key={voter.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: '#f9fafb', borderRadius: '10px', border: '1px solid #e5e7eb' }}>
+                                                                <span style={{ background: 'var(--primary)', color: 'white', padding: '2px 7px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '700', minWidth: '32px', textAlign: 'center' }}>{voter.sl_no}</span>
+                                                                <div style={{ flex: 1 }}>
+                                                                    <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{voter.name}</div>
+                                                                    <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>{voter.house_name} · Age {voter.age}</div>
+                                                                </div>
+                                                                <div style={{ fontSize: '0.72rem', color: '#9ca3af', textAlign: 'right' }}>
+                                                                    {voter.updated_at ? new Date(voter.updated_at).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : ''}
+                                                                </div>
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 </div>
                                             );
