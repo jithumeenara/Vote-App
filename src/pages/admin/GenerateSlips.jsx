@@ -218,6 +218,7 @@ export default function GenerateSlips() {
 
     const printRef = useRef();
     const isWardMember = user?.role === 'ward_member';
+    const isBoothMember = user?.role === 'booth_member';
 
     const [activeTab, setActiveTab] = useState('booth'); // 'booth' or 'individual'
     const [individualSearchTerm, setIndividualSearchTerm] = useState('');
@@ -474,6 +475,26 @@ export default function GenerateSlips() {
         }
     }, [isWardMember, user]);
 
+    // Booth Member Pre-selection
+    useEffect(() => {
+        if (isBoothMember && user?.booth_id) {
+            const fetchBoothDetails = async () => {
+                const { data } = await supabase
+                    .from('booths')
+                    .select('*, constituencies(*, districts(*))')
+                    .eq('id', user.booth_id)
+                    .single();
+                if (data) {
+                    setSelectedDistrict(data.constituencies.district_id);
+                    setSelectedConstituency(data.constituency_id);
+                    setBooths([data]);
+                    setSelectedBooth(data.id);
+                }
+            };
+            fetchBoothDetails();
+        }
+    }, [isBoothMember, user]);
+
     // Initialize Fuse with Advanced Configuration (Matching VoterList.jsx)
     useEffect(() => {
         if (wardVoters.length > 0) {
@@ -602,7 +623,7 @@ export default function GenerateSlips() {
                                         setSelectedBooth('');
                                         setSelectedCandidate('');
                                     }}
-                                    disabled={isWardMember}
+                                    disabled={isWardMember || isBoothMember}
                                 >
                                     <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
                                     {districts.map(d => (
@@ -621,7 +642,7 @@ export default function GenerateSlips() {
                                         setSelectedBooth('');
                                         setSelectedCandidate('');
                                     }}
-                                    disabled={!selectedDistrict || isWardMember}
+                                    disabled={!selectedDistrict || isWardMember || isBoothMember}
                                 >
                                     <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
                                     {constituencies.map(c => (
@@ -712,7 +733,7 @@ export default function GenerateSlips() {
                                         setSelectedConstituency('');
                                         setSelectedCandidate('');
                                     }}
-                                    disabled={isWardMember}
+                                    disabled={isWardMember || isBoothMember}
                                 >
                                     <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
                                     {districts.map(d => (
@@ -730,7 +751,7 @@ export default function GenerateSlips() {
                                         setSelectedConstituency(e.target.value);
                                         setSelectedCandidate('');
                                     }}
-                                    disabled={!selectedDistrict || isWardMember}
+                                    disabled={!selectedDistrict || isWardMember || isBoothMember}
                                 >
                                     <option value="">-- തിരഞ്ഞെടുക്കുക --</option>
                                     {constituencies.map(c => (

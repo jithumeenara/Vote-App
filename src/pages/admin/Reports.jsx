@@ -30,11 +30,14 @@ export default function Reports() {
     const [isAtTop, setIsAtTop] = useState(true);
 
     const isWardMember = user?.role === 'ward_member';
+    const isBoothMember = user?.role === 'booth_member';
 
     useEffect(() => {
-        fetchDistricts();
+        if (!isBoothMember) fetchDistricts();
         if (isWardMember && user?.ward_id) {
             fetchUserConstituencyDetails();
+        } else if (isBoothMember && user?.booth_id) {
+            fetchUserBoothDetails();
         } else {
             fetchStats(); // Initial fetch for admin (all voters)
         }
@@ -65,6 +68,23 @@ export default function Reports() {
         if (data) {
             setSelectedDistrict(data.district_id);
             setSelectedConstituency(data.id);
+        }
+    }
+
+    async function fetchUserBoothDetails() {
+        const { data } = await supabase
+            .from('booths')
+            .select('*, constituencies(*, districts(*))')
+            .eq('id', user.booth_id)
+            .single();
+
+        if (data) {
+            setDistricts([data.constituencies.districts]);
+            setConstituencies([data.constituencies]);
+            setBooths([data]);
+            setSelectedDistrict(data.constituencies.district_id);
+            setSelectedConstituency(data.constituency_id);
+            setSelectedBooth(data.id);
         }
     }
 
@@ -187,7 +207,7 @@ export default function Reports() {
             <div className="container">
                 <h2 style={{ marginBottom: '2rem', color: 'var(--primary-bg)' }}>റിപ്പോർട്ടുകൾ</h2>
 
-                <div className="grid grid-3" style={{ marginBottom: '2rem' }}>
+                {!isBoothMember && <div className="grid grid-3" style={{ marginBottom: '2rem' }}>
                     <div className="form-group">
                         <label className="label">ജില്ല</label>
                         <select
@@ -239,7 +259,7 @@ export default function Reports() {
                             ))}
                         </select>
                     </div>
-                </div>
+                </div>}
 
                 {loading ? <LoadingSpinner /> : (
                     <div className="grid grid-4">

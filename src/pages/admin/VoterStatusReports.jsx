@@ -26,6 +26,7 @@ export default function VoterStatusReports() {
     const [loading, setLoading] = useState(false);
 
     const isWardMember = user?.role === 'ward_member';
+    const isBoothMember = user?.role === 'booth_member';
 
     const statusOptions = [
         { value: 'all', label: 'All' },
@@ -39,10 +40,12 @@ export default function VoterStatusReports() {
     ];
 
     useEffect(() => {
-        fetchDistricts();
+        if (!isBoothMember) fetchDistricts();
         fetchFronts();
         if (isWardMember && user?.ward_id) {
             fetchUserConstituencyDetails();
+        } else if (isBoothMember && user?.booth_id) {
+            fetchUserBoothDetails();
         }
     }, [user]);
 
@@ -61,6 +64,23 @@ export default function VoterStatusReports() {
         if (data) {
             setSelectedDistrict(data.district_id);
             setSelectedConstituency(data.id);
+        }
+    }
+
+    async function fetchUserBoothDetails() {
+        const { data } = await supabase
+            .from('booths')
+            .select('*, constituencies(*, districts(*))')
+            .eq('id', user.booth_id)
+            .single();
+
+        if (data) {
+            setDistricts([data.constituencies.districts]);
+            setConstituencies([data.constituencies]);
+            setBooths([data]);
+            setSelectedDistrict(data.constituencies.district_id);
+            setSelectedConstituency(data.constituency_id);
+            setSelectedBooth(data.id);
         }
     }
 
@@ -207,7 +227,7 @@ export default function VoterStatusReports() {
 
             {/* Filters */}
             <div className="card" style={{ marginBottom: '2rem', padding: '1.5rem' }}>
-                <div className="responsive-grid">
+                {!isBoothMember && <div className="responsive-grid">
                     <div className="form-group">
                         <label className="label">ജില്ല</label>
                         <select
@@ -244,6 +264,7 @@ export default function VoterStatusReports() {
                             {booths.map(b => <option key={b.id} value={b.id}>{b.booth_no} - {b.name}</option>)}
                         </select>
                     </div>
+                </div>}
                     <div className="form-group">
                         <label className="label">സ്റ്റാറ്റസ് (Status)</label>
                         <select
@@ -257,7 +278,6 @@ export default function VoterStatusReports() {
                             ))}
                         </select>
                     </div>
-                </div>
                 {activeTab === 'status_report' && voters.length > 0 && (
                     <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
                         <button onClick={handleDownloadPdf} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

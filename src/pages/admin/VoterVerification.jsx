@@ -34,9 +34,10 @@ export default function VoteVerification() {
     const [pageSize, setPageSize] = useState(10);
 
     const isWardMember = user?.role === 'ward_member';
+    const isBoothMember = user?.role === 'booth_member';
 
     useEffect(() => {
-        fetchDistricts();
+        if (!isBoothMember) fetchDistricts();
         fetchFronts();
 
         const handleScroll = () => {
@@ -103,6 +104,28 @@ export default function VoteVerification() {
             fetchConstituencyDetails();
         }
     }, [isWardMember, user]);
+
+    // Booth Member Pre-selection
+    useEffect(() => {
+        if (isBoothMember && user?.booth_id) {
+            const fetchBoothDetails = async () => {
+                const { data } = await supabase
+                    .from('booths')
+                    .select('*, constituencies(*, districts(*))')
+                    .eq('id', user.booth_id)
+                    .single();
+                if (data) {
+                    setDistricts([data.constituencies.districts]);
+                    setConstituencies([data.constituencies]);
+                    setBooths([data]);
+                    setSelectedDistrict(data.constituencies.district_id);
+                    setSelectedConstituency(data.constituency_id);
+                    setSelectedBooth(data.id);
+                }
+            };
+            fetchBoothDetails();
+        }
+    }, [isBoothMember, user]);
 
     useEffect(() => {
         if (selectedBooth) {
@@ -322,8 +345,8 @@ export default function VoteVerification() {
             <div className="container">
                 <h2 style={{ marginBottom: '1.5rem', color: 'var(--primary-bg)' }}>വോട്ട് ഉറപ്പുവരുത്തുക (Vote Verification)</h2>
 
-                {/* Filters */}
-                <div className="card" style={{ marginBottom: '2rem', padding: '1.5rem' }}>
+                {/* Filters — hidden for booth members (auto-selected) */}
+                {!isBoothMember && <div className="card" style={{ marginBottom: '2rem', padding: '1.5rem' }}>
                     <div className="responsive-grid">
                         <div className="form-group">
                             <label className="label">ജില്ല</label>
@@ -362,7 +385,7 @@ export default function VoteVerification() {
                             </select>
                         </div>
                     </div>
-                </div>
+                </div>}
 
                 {/* Tabs */}
                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '2px solid #eee' }}>
