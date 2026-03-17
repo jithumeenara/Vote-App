@@ -307,6 +307,14 @@ export default function AdminDashboard() {
                             </div>
                         </Link>
 
+                        <Link to="/admin/manage/booth-members" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '4px solid #10b981' }}>
+                            <UserPlus size={24} color="#10b981" />
+                            <div>
+                                <h3 style={{ marginBottom: '0.25rem' }}>ബൂത്ത് യൂസർ</h3>
+                                <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>ബൂത്ത് ലോഗിൻ ക്രെഡൻഷ്യൽ ചേർക്കുക / നിയന്ത്രിക്കുക</p>
+                            </div>
+                        </Link>
+
                         <Link to="/admin/settings" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '4px solid #8b5cf6' }}>
                             <Settings size={24} color="#8b5cf6" />
                             <div>
