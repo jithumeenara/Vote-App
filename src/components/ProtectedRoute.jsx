@@ -6,11 +6,10 @@ export default function ProtectedRoute({ children }) {
     const { user } = useAuth();
     const location = useLocation();
 
-    // Also check localStorage directly — handles the race condition where
-    // wardLogin sets localStorage before React re-renders with new user state
     const hasWardSession = !!localStorage.getItem('ward_user');
+    const hasBoothSession = !!localStorage.getItem('booth_user');
 
-    if (!user && !hasWardSession) {
+    if (!user && !hasWardSession && !hasBoothSession) {
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 

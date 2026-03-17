@@ -11,7 +11,20 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // 1. Check for Custom Ward User Session
+        // 1. Check for Custom Booth User Session
+        const storedBoothUser = localStorage.getItem('booth_user');
+        if (storedBoothUser) {
+            try {
+                setUser(JSON.parse(storedBoothUser));
+            } catch (e) {
+                console.error("Failed to parse stored booth user", e);
+                localStorage.removeItem('booth_user');
+            }
+            setLoading(false);
+            return;
+        }
+
+        // 2. Check for Custom Ward User Session
         const storedWardUser = localStorage.getItem('ward_user');
         if (storedWardUser) {
             try {
@@ -59,8 +72,8 @@ export const AuthProvider = ({ children }) => {
         getSession();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            // Ignore Supabase updates if we are logged in as a custom ward user
-            if (localStorage.getItem('ward_user')) return;
+            // Ignore Supabase updates if we are logged in as a custom user
+            if (localStorage.getItem('ward_user') || localStorage.getItem('booth_user')) return;
 
             if (session?.user) {
                 try {
@@ -94,8 +107,21 @@ export const AuthProvider = ({ children }) => {
         if (error) throw error;
         if (!data) throw new Error('Invalid credentials');
 
-        // Store custom session
         localStorage.setItem('ward_user', JSON.stringify(data));
+        setUser(data);
+        return data;
+    };
+
+    const boothLogin = async (username, password) => {
+        const { data, error } = await supabase.rpc('login_booth_user', {
+            username_input: username,
+            password_input: password
+        });
+
+        if (error) throw error;
+        if (!data) throw new Error('Invalid credentials');
+
+        localStorage.setItem('booth_user', JSON.stringify(data));
         setUser(data);
         return data;
     };
@@ -103,9 +129,11 @@ export const AuthProvider = ({ children }) => {
     const value = {
         signUp: (data) => supabase.auth.signUp(data),
         signIn: (data) => supabase.auth.signInWithPassword(data),
-        wardLogin, // Export new login function
+        wardLogin,
+        boothLogin,
         signOut: async () => {
-            localStorage.removeItem('ward_user'); // Clear custom session
+            localStorage.removeItem('ward_user');
+            localStorage.removeItem('booth_user');
             setUser(null);
             await supabase.auth.signOut();
         },

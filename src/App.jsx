@@ -28,7 +28,9 @@ import Settings from './pages/admin/Settings';
 import MarkVotes from './pages/admin/MarkVotes';
 import VoterVerification from './pages/admin/VoterVerification';
 import ManageFronts from './pages/admin/manage/ManageFronts';
+import ManageBoothMembers from './pages/admin/manage/ManageBoothMembers';
 import VoterStatusReports from './pages/admin/VoterStatusReports';
+import BoothDashboard from './pages/booth/BoothDashboard';
 
 function Layout({ children }) {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -176,6 +178,18 @@ function App() {
               <Route path="/admin/voter-status-reports" element={
                 <ProtectedRoute>
                   <VoterStatusReports />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/manage/booth-members" element={
+                <ProtectedRoute>
+                  <ManageBoothMembers />
+                </ProtectedRoute>
+              } />
+
+              {/* Booth Dashboard - for booth_member role */}
+              <Route path="/booth" element={
+                <ProtectedRoute>
+                  <BoothDashboard />
                 </ProtectedRoute>
               } />
             </Routes>
