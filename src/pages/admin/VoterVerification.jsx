@@ -344,6 +344,183 @@ export default function VoteVerification() {
 
     const totalPages = Math.ceil(totalVoters / pageSize);
 
+    const handlePrint = async () => {
+        const booth = booths.find(b => b.id === selectedBooth);
+        const constituency = constituencies.find(c => c.id === selectedConstituency);
+        const district = districts.find(d => d.id === selectedDistrict);
+        const boothLabel = booth ? `${booth.booth_no} - ${booth.name}` : '';
+        const constituencyLabel = constituency ? `${constituency.constituency_no} - ${constituency.name}` : '';
+        const districtLabel = district?.name || '';
+        const now = new Date().toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+        // Fetch ALL voters for this booth for the print report (not paginated)
+        let allVoters = voters;
+        try {
+            let allData = [];
+            let from = 0;
+            const batchSize = 1000;
+            while (true) {
+                const { data } = await supabase.from('voters').select('*').eq('booth_id', selectedBooth).range(from, from + batchSize - 1);
+                if (!data || data.length === 0) break;
+                allData = [...allData, ...data];
+                if (data.length < batchSize) break;
+                from += batchSize;
+            }
+            allVoters = allData;
+        } catch (e) { /* fallback to current page */ }
+
+        const isSummary = reportSubTab === 'summary';
+        const title = isSummary ? 'Vote Summary Report' : 'Voted Members - Detailed Report';
+
+        let bodyHtml = '';
+
+        if (isSummary) {
+            const rows = fronts.map(front => {
+                const supporters = allVoters.filter(v => v.supported_front_id === front.id);
+                const voted = supporters.filter(v => v.has_voted).length;
+                const notVoted = supporters.length - voted;
+                const pct = supporters.length > 0 ? ((voted / supporters.length) * 100).toFixed(1) : '0.0';
+                return `<tr>
+                    <td style="padding:8px 12px;border:1px solid #ddd;font-weight:600">${front.name}</td>
+                    <td style="padding:8px 12px;border:1px solid #ddd;text-align:center">${supporters.length}</td>
+                    <td style="padding:8px 12px;border:1px solid #ddd;text-align:center;color:#16a34a;font-weight:700">${voted}</td>
+                    <td style="padding:8px 12px;border:1px solid #ddd;text-align:center;color:#dc2626">${notVoted}</td>
+                    <td style="padding:8px 12px;border:1px solid #ddd;text-align:center;font-weight:600">${pct}%</td>
+                </tr>`;
+            }).join('');
+            const totalSupp = allVoters.filter(v => v.supported_front_id).length;
+            const totalVoted = allVoters.filter(v => v.supported_front_id && v.has_voted).length;
+            const totalPending = totalSupp - totalVoted;
+            bodyHtml = `
+                <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:12px">
+                    <thead>
+                        <tr style="background:#1a1a2e;color:white">
+                            <th style="padding:10px 12px;border:1px solid #ddd;text-align:left">മുന്നണി (Front)</th>
+                            <th style="padding:10px 12px;border:1px solid #ddd;text-align:center">Total Supporters</th>
+                            <th style="padding:10px 12px;border:1px solid #ddd;text-align:center">Voted</th>
+                            <th style="padding:10px 12px;border:1px solid #ddd;text-align:center">Not Voted</th>
+                            <th style="padding:10px 12px;border:1px solid #ddd;text-align:center">Percentage</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}
+                        <tr style="background:#f0f4ff;font-weight:700">
+                            <td style="padding:10px 12px;border:1px solid #ddd">ആകെ (Total)</td>
+                            <td style="padding:10px 12px;border:1px solid #ddd;text-align:center">${totalSupp}</td>
+                            <td style="padding:10px 12px;border:1px solid #ddd;text-align:center;color:#16a34a">${totalVoted}</td>
+                            <td style="padding:10px 12px;border:1px solid #ddd;text-align:center;color:#dc2626">${totalPending}</td>
+                            <td style="padding:10px 12px;border:1px solid #ddd;text-align:center">-</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div style="margin-top:24px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;color:#555">
+                    <strong>Summary:</strong> Total Registered Voters: ${allVoters.length} &nbsp;|&nbsp; Total Verified (Front Assigned): ${totalSupp} &nbsp;|&nbsp; Total Voted: ${totalVoted} &nbsp;|&nbsp; Pending: ${allVoters.length - totalVoted}
+                </div>`;
+        } else {
+            bodyHtml = fronts.map(front => {
+                const fv = allVoters.filter(v => v.has_voted && v.supported_front_id === front.id);
+                if (fv.length === 0) return '';
+                const rows = fv.map((v, i) => `<tr style="background:${i % 2 === 0 ? '#fff' : '#f9fafb'}">
+                    <td style="padding:7px 10px;border:1px solid #ddd;text-align:center">${v.sl_no}</td>
+                    <td style="padding:7px 10px;border:1px solid #ddd;font-weight:600">${v.name}</td>
+                    <td style="padding:7px 10px;border:1px solid #ddd;color:#555">${v.guardian_name || ''}</td>
+                    <td style="padding:7px 10px;border:1px solid #ddd;color:#555">${v.house_no ? `${v.house_no} /` : ''} ${v.house_name || ''}</td>
+                    <td style="padding:7px 10px;border:1px solid #ddd;text-align:center">${v.age || ''}</td>
+                    <td style="padding:7px 10px;border:1px solid #ddd;color:#555;font-size:11px">${v.updated_at ? new Date(v.updated_at).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '-'}</td>
+                </tr>`).join('');
+                return `
+                    <div style="margin-bottom:20px;page-break-inside:avoid">
+                        <h3 style="background:#1a1a2e;color:white;padding:8px 12px;margin:0;font-size:13px;border-radius:4px 4px 0 0">
+                            ${front.name} &nbsp;—&nbsp; ${fv.length} voters voted
+                        </h3>
+                        <table style="width:100%;border-collapse:collapse;font-size:12px">
+                            <thead>
+                                <tr style="background:#e8eaf6">
+                                    <th style="padding:7px 10px;border:1px solid #ddd;text-align:center;width:50px">Sl.No</th>
+                                    <th style="padding:7px 10px;border:1px solid #ddd;text-align:left">Name</th>
+                                    <th style="padding:7px 10px;border:1px solid #ddd;text-align:left">Guardian</th>
+                                    <th style="padding:7px 10px;border:1px solid #ddd;text-align:left">House</th>
+                                    <th style="padding:7px 10px;border:1px solid #ddd;text-align:center;width:40px">Age</th>
+                                    <th style="padding:7px 10px;border:1px solid #ddd;text-align:center;width:100px">Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>`;
+            }).join('');
+            const noFront = allVoters.filter(v => v.has_voted && !v.supported_front_id);
+            if (noFront.length > 0) {
+                const rows = noFront.map((v, i) => `<tr style="background:${i % 2 === 0 ? '#fff' : '#f9fafb'}">
+                    <td style="padding:7px 10px;border:1px solid #ddd;text-align:center">${v.sl_no}</td>
+                    <td style="padding:7px 10px;border:1px solid #ddd;font-weight:600">${v.name}</td>
+                    <td style="padding:7px 10px;border:1px solid #ddd">${v.guardian_name || ''}</td>
+                    <td style="padding:7px 10px;border:1px solid #ddd">${v.house_no ? `${v.house_no} /` : ''} ${v.house_name || ''}</td>
+                    <td style="padding:7px 10px;border:1px solid #ddd;text-align:center">${v.age || ''}</td>
+                    <td style="padding:7px 10px;border:1px solid #ddd;font-size:11px">${v.updated_at ? new Date(v.updated_at).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '-'}</td>
+                </tr>`).join('');
+                bodyHtml += `<div style="margin-bottom:20px;page-break-inside:avoid">
+                    <h3 style="background:#6b7280;color:white;padding:8px 12px;margin:0;font-size:13px;border-radius:4px 4px 0 0">Unverified (No Front) — ${noFront.length} voters</h3>
+                    <table style="width:100%;border-collapse:collapse;font-size:12px">
+                        <thead><tr style="background:#f1f5f9">
+                            <th style="padding:7px 10px;border:1px solid #ddd;text-align:center;width:50px">Sl.No</th>
+                            <th style="padding:7px 10px;border:1px solid #ddd;text-align:left">Name</th>
+                            <th style="padding:7px 10px;border:1px solid #ddd;text-align:left">Guardian</th>
+                            <th style="padding:7px 10px;border:1px solid #ddd;text-align:left">House</th>
+                            <th style="padding:7px 10px;border:1px solid #ddd;text-align:center;width:40px">Age</th>
+                            <th style="padding:7px 10px;border:1px solid #ddd;text-align:center;width:100px">Time</th>
+                        </tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>`;
+            }
+        }
+
+        const html = `<!DOCTYPE html><html><head>
+            <meta charset="UTF-8">
+            <title>${title}</title>
+            <style>
+                * { box-sizing: border-box; }
+                body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; color: #1a1a2e; font-size: 13px; }
+                .doc-header { border-bottom: 3px solid #1a1a2e; padding-bottom: 12px; margin-bottom: 16px; }
+                .doc-title { font-size: 20px; font-weight: 800; color: #1a1a2e; margin: 0 0 4px 0; }
+                .doc-subtitle { font-size: 13px; color: #555; margin: 0; }
+                .meta-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 12px; }
+                .meta-item label { display: block; color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+                .meta-item span { font-weight: 700; font-size: 13px; }
+                @media print {
+                    body { padding: 10px; }
+                    @page { margin: 15mm; size: A4; }
+                    .no-print { display: none !important; }
+                    table { page-break-inside: auto; }
+                    tr { page-break-inside: avoid; }
+                    div { page-break-inside: avoid; }
+                }
+            </style>
+        </head><body>
+            <div class="doc-header">
+                <p class="doc-title">എന്റെ വോട്ട് — My Vote</p>
+                <p class="doc-subtitle">${title}</p>
+            </div>
+            <div class="meta-grid">
+                <div class="meta-item"><label>District</label><span>${districtLabel}</span></div>
+                <div class="meta-item"><label>Constituency</label><span>${constituencyLabel}</span></div>
+                <div class="meta-item"><label>Booth</label><span>${boothLabel}</span></div>
+                <div class="meta-item"><label>Total Voters</label><span>${allVoters.length}</span></div>
+                <div class="meta-item"><label>Voted</label><span>${allVoters.filter(v => v.has_voted).length}</span></div>
+                <div class="meta-item"><label>Printed On</label><span>${now}</span></div>
+            </div>
+            ${bodyHtml}
+            <div style="margin-top:30px;border-top:1px solid #ddd;padding-top:10px;font-size:11px;color:#888;text-align:center">
+                Generated by എന്റെ വോട്ട് (My Vote) &nbsp;·&nbsp; ${now} &nbsp;·&nbsp; ${boothLabel}
+            </div>
+        </body></html>`;
+
+        const win = window.open('', '_blank', 'width=900,height=700');
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+        setTimeout(() => { win.print(); }, 500);
+    };
+
     const handlePageChange = (newPage) => {
         if (newPage < 1 || newPage > totalPages) return;
         setCurrentPage(newPage);
@@ -487,7 +664,7 @@ export default function VoteVerification() {
                                         </p>
                                     </div>
                                     <button
-                                        onClick={() => window.print()}
+                                        onClick={handlePrint}
                                         className="btn btn-primary"
                                         style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                                     >
