@@ -161,6 +161,36 @@ export default function AiAssistant() {
         }
     }, [isBoothMember, isWardMember, user]);
 
+    // Normalize filter values so GPT casing errors don't break queries
+    function normalizeFilter(f) {
+        if (f.column === 'gender') {
+            const lower = String(f.value).toLowerCase();
+            if (lower === 'male' || lower === 'm') return { ...f, value: 'Male', operator: 'eq' };
+            if (lower === 'female' || lower === 'f') return { ...f, value: 'Female', operator: 'eq' };
+        }
+        if (f.column === 'has_voted') {
+            const v = String(f.value).toLowerCase();
+            return { ...f, value: v === 'true' || v === '1' || v === 'yes', operator: 'eq' };
+        }
+        return f;
+    }
+
+    // Check if a count query is already answered by pre-loaded voterStats
+    function tryBaseContextCount(queryIntent) {
+        if (!baseContext || queryIntent.type !== 'count' || queryIntent.table !== 'voters') return null;
+        const filters = (queryIntent.filters || []).map(normalizeFilter);
+        if (filters.length === 0) return baseContext.voterStats.total;
+        if (filters.length === 1) {
+            const f = filters[0];
+            if (f.column === 'gender' && f.value === 'Male') return baseContext.voterStats.male;
+            if (f.column === 'gender' && f.value === 'Female') return baseContext.voterStats.female;
+            if (f.column === 'has_voted' && f.value === true) return baseContext.voterStats.voted;
+            if (f.column === 'has_voted' && f.value === false) return baseContext.voterStats.pending;
+            if (f.column === 'status' && f.value === 'deleted') return baseContext.voterStats.deleted;
+        }
+        return null;
+    }
+
     async function handleSend(e) {
         e.preventDefault();
         if (!input.trim()) return;
@@ -176,9 +206,17 @@ export default function AiAssistant() {
             // 1. Parse intent
             const queryIntent = await parseUserQuery(userMsg.text);
 
-            // 2. Execute specific query if needed
+            // 2. Try to answer count from pre-loaded stats first (avoids filter casing bugs)
             let specificResult = null;
-            if ((queryIntent.type === 'count' || queryIntent.type === 'list') && queryIntent.table) {
+            const baseCount = tryBaseContextCount(queryIntent);
+            if (baseCount !== null) {
+                specificResult = {
+                    intent: queryIntent,
+                    result: { count: baseCount },
+                    source: 'pre-fetched-accurate-stats'
+                };
+            } else if (queryIntent.table) {
+                // 3. For list queries or non-voter counts: run Supabase query
                 const limit = Math.min(queryIntent.limit || 15, 20);
                 let query = supabase.from(queryIntent.table);
 
@@ -196,8 +234,8 @@ export default function AiAssistant() {
                     }
                 }
 
-                // Apply parsed filters
-                (queryIntent.filters || []).forEach(f => {
+                // Apply normalized filters
+                (queryIntent.filters || []).map(normalizeFilter).forEach(f => {
                     if (f.operator === 'eq') query = query.eq(f.column, f.value);
                     else if (f.operator === 'ilike') query = query.ilike(f.column, `%${f.value}%`);
                     else if (f.operator === 'gt') query = query.gt(f.column, f.value);
@@ -206,7 +244,7 @@ export default function AiAssistant() {
                     else if (f.operator === 'lte') query = query.lte(f.column, f.value);
                 });
 
-                // Apply scope
+                // Apply scope restriction
                 query = applyScopeToQuery(query, queryIntent.table, scope);
 
                 const { data, count, error } = await query;
@@ -221,14 +259,15 @@ export default function AiAssistant() {
                 }
             }
 
-            // 3. Build full context (base stats + specific result)
+            // 4. Build full context — base stats always included
             const context = {
-                ...(baseContext || { voterStats: 'Loading...', scope: scope.scopeLabel }),
+                IMPORTANT_NOTE: 'voterStats contains pre-fetched accurate counts. Always use voterStats for total/male/female/voted/pending answers.',
+                ...(baseContext || { voterStats: 'still loading', scope: scope.scopeLabel }),
                 ...(specificResult ? { specificQueryResult: specificResult } : {}),
                 appName: 'എന്റെ വോട്ട് (My Vote)',
             };
 
-            // 4. Ask AI
+            // 5. Ask AI
             const responseText = await askDatabaseQuestion(userMsg.text, context);
             setMessages(prev => [...prev, { role: 'assistant', text: responseText }]);
         } catch (error) {
