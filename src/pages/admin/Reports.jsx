@@ -5,81 +5,215 @@ import { useAuth } from '../../context/AuthContext';
 import { ArrowUp, ArrowDown, Users, UserCheck, UserX, UserMinus, AlertTriangle, Ban, HelpCircle, Copy, Home, Moon, Star, Sparkles, ChevronDown, ChevronUp, Printer } from 'lucide-react';
 
 // ── Religion auto-detection (Kerala name patterns) ─────────────────────────
-const MUSLIM_TOKENS = [
-    'mohammed','mohamad','muhammad','mohd','abu ','abu-',
-    'abdul','abdulla','abdu','abubakr','abubakar',
-    'hassan','husain','hussain','hasan','habeeb','habib',
-    'sheikh','syed','sayyid','fathima','fatima','faheema',
-    'ayisha','aisha','aysha','zainab','hafsath','hafsa',
-    'mariyam','maryam','shahana','shafina','shafeeqa',
-    'safiya','safia','najma','najeeba','noushad','nowshad',
-    'rasheed','rashid','aslam','ansar','ansari','siraj',
-    'basheer','bashir','kabeer','kabir','salim','saleem',
-    'rahim','raheem','jaleel','jalil','hameed','hamid',
-    'waheed','wahid','majeed','majid','hakeem','hakim',
-    'ismail','ismaeel','ibrahim','ibraheem','yusuf','yoosuf',
-    'usman','siddique','siddiqui','sidheek','shareef','sharif','sherif',
-    'koya',' haji','hajee','shafi','shafee','nizar','nisar',
-    'feroz','feroos','rafeeq','rafiq','rafeeque',
-    'musthafa','mustafa','rahman','rehman','riyaz','riyas',
-    'swalih','salah','tahir','tariq','thariq','zakariya',
-    'muneer','munir','naushad','afsal','afzal','ashraf',
-    'shihab','sahib','sahab','kunhi','kunjikutty','moideen','moidu',
-    'ahammed','ahamed','ummer','umar','omar','ibnu','ibn ',
-    'ayub','ayyub','shabeer','jabir','jabeer','jasim','jassim',
-    'lukman','luqman','naufal','nawfal','shabana','rukhsana',
-    'raheela','raziya','rabiya','rabeeya','ruqaiya','sulfikar',
-    'sulfikkar','sulekha','subaida','sumayya','thasneem',
-    'thasni','unais','unaiz','vazeer','vazir','zubair','zubear',
-];
-const CHRISTIAN_TOKENS = [
-    'thomas','george','john ','jose ','joseph','paul ','peter','matthew',
-    'philip','stephen','alex ','abraham','augustine','xavier','francis',
-    'antony','anthony','sebastian','lawrence','vincent','biju','shibu',
-    ' mary ','mariam','mariamma','annamma','aleyamma','kunjumol','molly',
-    'tessy','celine','lisy','lissy','lizy','ancy','shaly','sheela',
-    'suresh thomas','varghese','mathew','chacko','kuttappan','tharakan',
-    'mundadan','panickar','kuriakose','cyriac','cyril','eapen','elias',
-    'elisha','elizabath','elizabetha','elsamma','ommen','oommen',
-    'thankamma','rosamma','annakutty','marykutty','omana','kunjamma',
-    'saby','sabu','sajimon','saji','saju','somy','soby','sobin','sojan',
-    'shijo','shino','shinu','shiju','shyjo','aby','abin','abishek',
-    'abiram','achu','achuthan christian','agi','agio','agius',
-    'agi','giby','gigi','gigin','gigy','gijo','gijin','gijoy',
-    'gigy','benny','beno','benoj','bibin','biby','bijo','biji',
-    'binil','binoy','binu','boby','bobby','bobin','boban',
-    'christy','christu','christo','cijo','cinu','ciby','cibin',
-    'dijo','diji','dibin','diby','dinil','dinesh christian',
-];
-const HINDU_STRONG = [
-    'nair','menon','pillai','kurup','panikkar','warrier','namboothiri',
-    'nambiar','namboodiri','pothuval','ezhava','thiyya','panicker',
-    'krishnan','muraleedharan','gopinathan','damodaran','gopalan',
-    'balakrishnan','narayanan','sivasankaran','subrahmanyam',
-    'devan','ashtamurthy','vaidyan','chathu','chattambikkaran',
-    'ammini','omana hindu','thankam','kalyani','kamalam','sarojam',
-    'geetha','radha','seetha','sumathi','leela','mallika','bindhu',
-    'sreedevi','sreelatha','sreekala','sreeja','sreekumar',
-    'unnikrishnan','unnikrishan','harikrishnan','hari krishnan',
-    'ravi','raju','raman','vijayan','sureshkumar','mohanan',
-    'chandran','chandramohan','padmanabhan','venugopal','rajendran',
-    'babu','balan','balakumar','aravind','arjun','ajith','ajin',
-];
+// Strategy: word-by-word scoring (not substring) to avoid false positives.
+// Supports both Malayalam script and Manglish/English.
+// Based on: "Kerala Malayalam Name Grouping by Religion using AI" spec.
 
+// Step 1: Normalize spelling variants → canonical form
+function normalizeName(raw) {
+    let n = (raw || '').toUpperCase().trim();
+    // Common Muslim name spelling variants → canonical
+    n = n.replace(/\bMOHAMMAD\b|\bMOHAMMED\b|\bMUHAMMAD\b|\bMOHD\.?\b|\bMD\.?\b/g, 'MUHAMMED');
+    n = n.replace(/\bAHAMED\b|\bAHAMMED\b/g, 'MUHAMMED');
+    n = n.replace(/\bABDULLA\b|\bABDULLAH\b/g, 'ABDUL');
+    n = n.replace(/\bHUSSAIN\b|\bHUSAIN\b/g, 'HASSAN');
+    n = n.replace(/\bFATIMA\b|\bFATHEMA\b|\bFAHEEMA\b/g, 'FATHIMA');
+    n = n.replace(/\bAISHA\b|\bAYSHA\b/g, 'AYISHA');
+    n = n.replace(/\bMARYAM\b/g, 'MARIYAM');
+    n = n.replace(/\bMATTHEW\b/g, 'MATHEW');
+    n = n.replace(/\bJOSEPH\b/g, 'JOSE');
+    n = n.replace(/\bGEORGE\b/g, 'GEORGE');
+    // Remove house identifiers (BHAVAN, MANZIL, VILLA, HOUSE, NIVAS)
+    n = n.replace(/\b(BHAVAN|MANZIL|VILLA|HOUSE|NIVAS|ILLAM|VEEDU)\b/g, '');
+    return n.trim();
+}
+
+// Step 2: Word dictionaries (exact word match after split)
+// ── Malayalam script words (stored as-is in DB) ──
+const ML_MUSLIM = new Set([
+    'മുഹമ്മദ്','മുഹമ്മദ','മൊഹമ്മദ്','അബ്ദുൽ','അബ്ദുൾ','അബ്ദുല്ല',
+    'ഫാത്തിമ','ഫാത്തിമ്മ','ഫാത്തിമ','ഫഹീമ','ആഇഷ','ആയിഷ',
+    'മർയം','മര്‍യം','ഹസൻ','ഹസ്സൻ','ഹുസൈൻ','ഹുസൈൻ',
+    'ഷാഫി','ശാഫി','ഷഫീക്','ഷഹ്‌ദ','ഷഹ്ദ',
+    'റഹ്മാൻ','റഹ്മ്മാൻ','അൻസാർ','ഇസ്മാഈൽ','ഇബ്രാഹീം',
+    'ഷൈഖ്','സയ്യിദ്','നൗഷാദ്','നൗഷദ്','റഷീദ്','ബഷീർ','ഖദീജ',
+    'ഇബ്നു','ഉമർ','ഉസ്മാൻ','ഹകീം','ഹമീദ്','ജലീൽ','ഷിഹാബ്',
+    'മൊയ്ദീൻ','മൊഹിദ്ദീൻ','കോയ','ഹാജി','മുസ്തഫ','ഉനൈസ്',
+    'സുലൈഖ','സുബൈദ','ഹാഫ്‌സ','സഫിയ','ഷഹാന','ബീവി','ബീഫ',
+    'ഷഹ്‌ജഹാൻ','സാജഹാൻ','ഷംസ','ഷംഷ','നജ്മ','സ്വലീഹ്','ഉൻസ',
+    'ഫൈസൽ','ഫൈസ്','നൗഫൽ','ലുഖ്മാൻ','മൂസ','ഈസ',
+]);
+const ML_CHRISTIAN = new Set([
+    'തോമസ്','ജോർജ്','ജോസ്','ജോണ്‍','ജോൺ','പോൾ','പോൾ',
+    'മത്തായി','ഫിലിപ്പ്','സ്റ്റീഫൻ','അബ്രഹാം','ഫ്രാൻസിസ്','സെബാസ്റ്റ്യൻ',
+    'ലോറൻസ്','വിൻസന്റ്','ഓഗസ്‌റ്റിൻ','ആഗസ്റ്റിൻ',
+    'മറിയ','മറിയം','മേരി','ആൻ','ആന്ന','അന്ന','ആന്നക്കുട്ടി',
+    'ഏലിസബത്ത്','ഏലിസ','ഏലിയ','ഏലിഷ',
+    'വർഗ്ഗീസ്','വർഗ്ഗീസ','ചാക്കോ','ഒമ്മൻ','ഏ.ഒ.','കുര്യൻ','കുര്യാക്കോസ്',
+    'ഈഫൻ','ഈപ്പൻ','കൊച്ചുമോൻ','കൊച്ചുതൊമ്മൻ','ഉഷ','ആൻസി',
+    'ടെസ്സി','സെലിൻ','ലിസ്സി','ലിസി','ലൈലി','അഞ്ചലി',
+    'ബിജു','ഷിബു','സബി','ജോബി','ബോബി','ബിനോ','ബിജോ',
+    'ബെന്നി','ബേബി','ഗ്ലാഡ്സ്','ഗ്ലാഡ്‌സ്','ഗ്ലോറി','ലൂസ്',
+    'ഷൈജോ','ഷൈനോ','ഷൈജി','ഷൈബു',
+]);
+const ML_HINDU = new Set([
+    'നായർ','നായര്','മേനോൻ','മേനോന്','പിള്ള','കുറുപ്പ്','കുറുപ്',
+    'പണിക്കർ','വാര്യർ','നമ്പൂതിരി','നമ്പ്യാർ','ഏഴവൻ','തിയ്യൻ',
+    'കൃഷ്ണൻ','കൃഷ്ണ','ഗോപൻ','ഗോപ','ഗോവിന്ദൻ','ദേവൻ','ദേവൻ',
+    'ദേവി','ദേവ','ലക്ഷ്മി','ലക്ഷ്‌മി','ശ്രീദേവി','ഭദ്ര','ദുർഗ',
+    'ശിവൻ','ശിവ','ശിവദേവ്','ഹരി','ഹരി','കുമാർ','സുരേഷ്',
+    'രമേശ്','മോഹൻ','വിജയൻ','ദാമോദരൻ','മുരളീധരൻ','ഉണ്ണി',
+    'ഉണ്ണികൃഷ്ണൻ','ഹരികൃഷ്ണൻ','ബാലകൃഷ്ണൻ','ബാലൻ',
+    'ഗൗരി','ഗൗര','കല്യാണി','കമലം','ശാരദ','ശ്യാമ','ശ്യാമ',
+    'കൗസ്ത്യ','ഗീത','ഗീതൻ','ഗൗരി','ജ്യോതി','ജ്യോതി',
+    'സുമതി','ലീല','മല്ലിക','ബിന്ദു','ഇന്ദിര','ഇന്ദ്ര',
+    'രാധ','സീത','ഉഷ','ഉഷ','ഉദ്ദ','ഉഷ','ഇന്ദ്ര',
+    'അമ്മ','അമ്മിണി','ചിന്ത','ചിത്ര','ലത','ലത',
+    'വേണു','ബേബി','ദിവ്യ','ദിവ്യ','ദിലീപ്','അനിൽ','അനിൽ',
+    'ബിനു','ബിനി','ബിന','ശ്രീ','ഷൈൻ','ഷൈൻ',
+    'ഓമന','ഓമന','ത്രേസ്യ','ക്ഷേ','ക്ഷേമ','ക്ഷ',
+]);
+
+// ── English/Manglish word sets ──
+const EN_MUSLIM = new Set([
+    'MUHAMMED','MOHAMMED','MOHAMAD','AHAMMED','AHAMED',
+    'ABDUL','ABDU','ABDUR','ABUBAKR','ABUBAKAR',
+    'HASSAN','HASAN','HUSSAIN','HUSAIN',
+    'FATHIMA','FATIMA','FAHEEMA',
+    'AYISHA','AISHA','AYSHA',
+    'ZAINAB','ZAINABA','HAFSATH','HAFSA',
+    'MARIYAM','MARYAM','SHAHANA','SHAFEEQA',
+    'SAFIYA','SAFIA','NAJMA','NAJEEBA',
+    'NOUSHAD','NOWSHAD','NAUSHAD',
+    'RASHEED','RASHID','ASLAM','ANSAR','ANSARI',
+    'SIRAJ','SEERAJ','BASHEER','BASHIR',
+    'KABEER','KABIR','SALIM','SALEEM',
+    'RAHIM','RAHEEM','JALEEL','JALIL',
+    'HAMEED','HAMID','WAHEED','WAHID',
+    'MAJEED','MAJID','HAKEEM','HAKIM',
+    'ISMAIL','ISMAEEL','IBRAHIM','IBRAHEEM',
+    'YUSUF','YOOSUF','USMAN','UTHMAN',
+    'SIDDIQUE','SIDDIQUI','SIDHEEK',
+    'SHAREEF','SHARIF','SHERIF',
+    'KOYA','HAJI','HAJEE',
+    'SHAFI','SHAFEE','SHAFIQ','SHAFEEQ',
+    'NIZAR','NISAR','FEROZ','FEROOS',
+    'RAFEEQ','RAFIQ','RAFEEQUE',
+    'MUSTHAFA','MUSTAFA','RAHMAN','REHMAN',
+    'RIYAZ','RIYAS','SWALIH','SALAH',
+    'TAHIR','TARIQ','THARIQ','ZAKARIYA',
+    'MUNEER','MUNIR','AFSAL','AFZAL','ASHRAF',
+    'SHIHAB','MOIDEEN','MOIDU',
+    'UMMER','UMAR','OMAR','IBNU',
+    'AYUB','AYYUB','SHABEER','JABIR','JABEER',
+    'JASIM','JASSIM','LUKMAN','LUQMAN',
+    'NAUFAL','NAWFAL','SHABANA','RUKHSANA',
+    'RAZIYA','RABIYA','SULFIKAR','SULFIKKAR',
+    'SULEKHA','SUBAIDA','SUMAYYA',
+    'THASNEEM','THASNI','UNAIS','UNAIZ',
+    'VAZEER','VAZIR','ZUBAIR','ZUBEAR',
+    'BEEVI','BEEVY','KUNHI','MANZOOR','MANAF',
+    'FAIZAL','FAISAL','FAIZ','SAINUL','SAINUDHEEN',
+    'SHAJAHAN','SHAJAH','SAMEER','SAMIR',
+    'SHANAWAZ','SHANAVAS','ROSHAN','ROSHNA',
+]);
+const EN_CHRISTIAN = new Set([
+    'THOMAS','GEORGE','JOHN','JOSE','JOSEPH',
+    'PAUL','PETER','MATHEW','MATTHEW',
+    'PHILIP','STEPHEN','ALEX','ABRAHAM',
+    'AUGUSTINE','XAVIER','FRANCIS',
+    'ANTONY','ANTHONY','SEBASTIAN','LAWRENCE',
+    'VINCENT','BIJU','SHIBU',
+    'MARY','MARIAM','MARIAMMA','ANNAMMA',
+    'ALEYAMMA','KUNJUMOL','MOLLY',
+    'TESSY','CELINE','LISY','LISSY','LIZY',
+    'ANCY','SHALY','SHEELA',
+    'VARGHESE','MATHEW','CHACKO','KUTTAPPAN',
+    'THARAKAN','MUNDADAN','PANICKAR',
+    'KURIAKOSE','CYRIAC','CYRIL',
+    'EAPEN','EIPEN','ELIAS','ELISHA',
+    'ELIZABATH','ELIZABETHA','ELSAMMA',
+    'OMMEN','OOMMEN','THANKAMMA','ROSAMMA',
+    'ANNAKUTTY','MARYKUTTY','KUNJAMMA',
+    'SABY','SABU','SAJIMON','SAJI','SAJU',
+    'SOMY','SOBY','SOBIN','SOJAN',
+    'SHIJO','SHINO','SHINU','SHIJU','SHYJO',
+    'ABY','ABIN','GIBY','GIGI','GIGIN',
+    'GIJO','GIJOY','BENNY','BENO','BENOJ',
+    'BIBIN','BIBY','BIJO','BIJI','BINIL',
+    'BINOY','BINU','BOBY','BOBBY','BOBIN','BOBAN',
+    'CHRISTY','CHRISTU','CHRISTO','CIJO','CINU',
+    'DIJO','DIJI','DIBIN','DIBY','DINIL',
+    'TIJO','TIJU','TIBIN','TIBY','TINIL',
+    'ROSHAN','ROSHNI','LIGI','LIGY','LIBIN',
+    'LIBU','LINIL','LINOY','LINTO','LIJU',
+    'BABY','JOBY','JOJI','JOJO','JOMOL',
+    'JOMON','JOBIN','JOBY','JOBIL',
+]);
+const EN_HINDU = new Set([
+    'NAIR','MENON','PILLAI','KURUP','PANIKKAR',
+    'WARRIER','NAMBOOTHIRI','NAMBIAR','NAMBOODIRI',
+    'POTHUVAL','EZHAVA','THIYYA','PANICKER',
+    'KRISHNAN','KRISHNA','MURALEEDHARAN',
+    'GOPINATHAN','GOPALAN','DAMODARAN',
+    'BALAKRISHNAN','NARAYANAN','SIVASANKARAN',
+    'SUBRAHMANYAM','DEVI','LAKSHMI','LEKHA',
+    'GEETHA','RADHA','SEETHA','SUMATHI',
+    'LEELA','MALLIKA','BINDHU','SREEDEVI',
+    'SREEKUMAR','UNNIKRISHNAN','HARIKRISHNAN',
+    'VIJAYAN','MOHANAN','CHANDRAN','PADMANABHAN',
+    'VENUGOPAL','RAJENDRAN','BALAN','RAJAN',
+    'MOHAN','MURALI','SIVAN','SHANKAR','SHANKARAN',
+    'GOPALAKRISHNAN','SATHEESH','SATHEESHAN',
+    'RAVEENDRAN','RAJENDRAN','RAJESH','SURESH',
+    'RAMESH','DINESH','MAHESH','GANESH',
+    'KAVITHA','PARVATHY','INDIRA','AMBIKA',
+    'SAROJAM','KALYANI','KAMALAM','AMMINI',
+    'OMANA','THANKAM','THANKAMANI','SARADHA',
+    'USHA','GIRIJA','GIRISH','GIREESH',
+    'ARAVIND','ARJUN','AJITH','PRAVEEN','PRADEEP',
+    'PRAVEENA','PRIYA','DIVYA','DEEPA','DEEPTHI',
+    'ANJU','ASHA','REKHA','REMA','RAJI',
+]);
+
+// Step 3: Suffix/prefix patterns for compound words
+const MUSLIM_SUFFIX = ['BEEVI','BEEVY','KUTTY','KUNHI','KABEER','RAHEEM','RAHIMAN','UTHMAN'];
+const CHRISTIAN_SUFFIX = ['AMMA','KUTTY','ACHAN','APPAN'];
+const HINDU_SUFFIX = ['KUMAR','KRISHNAN','KRISHNA','DEVI','LEKHA','NAIR','MENON','WARRIER','PILLAI','KURUP','RAJAN','MOHAN','CHANDRAN','VIJAYAN','BALAN'];
+const HINDU_PREFIX = ['SREE','SRI','HARI','GIRI','MURA','VENU','RAMA','PARA','SIVA','DAMO'];
+
+// Step 4: Classify with word-by-word scoring
 function detectReligion(name) {
     if (!name) return 'Other';
-    const n = ` ${name.toLowerCase()} `;
-    let muslimScore = 0, christianScore = 0, hinduScore = 0;
-    for (const t of MUSLIM_TOKENS) { if (n.includes(t)) muslimScore += 2; }
-    for (const t of CHRISTIAN_TOKENS) { if (n.includes(t)) christianScore += 2; }
-    for (const t of HINDU_STRONG) { if (n.includes(t)) hinduScore += 2; }
-    // Tiebreak: Kerala default lean towards Hindu
-    hinduScore += 0.5;
-    const max = Math.max(muslimScore, christianScore, hinduScore);
-    if (max < 1) return 'Other';
-    if (max === muslimScore) return 'Muslim';
-    if (max === christianScore) return 'Christian';
-    return 'Hindu';
+    const score = { Hindu: 0.5, Muslim: 0, Christian: 0 }; // 0.5 Hindu default (Kerala baseline)
+
+    // Check Malayalam script tokens (exact word match)
+    const mlWords = name.split(/[\s,./]+/).filter(Boolean);
+    for (const w of mlWords) {
+        if (ML_MUSLIM.has(w))    { score.Muslim    += 3; continue; }
+        if (ML_CHRISTIAN.has(w)) { score.Christian += 3; continue; }
+        if (ML_HINDU.has(w))     { score.Hindu     += 3; continue; }
+    }
+
+    // Check Manglish/English tokens (normalize first, then word match)
+    const normalized = normalizeName(name);
+    const enWords = normalized.split(/[\s,./]+/).filter(w => w.length > 1 && !/^[A-Z]$/.test(w)); // skip single initials
+    for (const w of enWords) {
+        if (EN_MUSLIM.has(w))    { score.Muslim    += 3; continue; }
+        if (EN_CHRISTIAN.has(w)) { score.Christian += 3; continue; }
+        if (EN_HINDU.has(w))     { score.Hindu     += 3; continue; }
+        // Suffix matching for compound words (e.g., SREEKUMAR → KUMAR → Hindu)
+        for (const s of HINDU_SUFFIX)    { if (w.endsWith(s) && w.length > s.length) { score.Hindu     += 2; break; } }
+        for (const s of MUSLIM_SUFFIX)   { if (w.endsWith(s) && w.length > s.length) { score.Muslim    += 2; break; } }
+        for (const s of CHRISTIAN_SUFFIX){ if (w.endsWith(s) && w.length > s.length) { score.Christian += 1; break; } }
+        for (const s of HINDU_PREFIX)    { if (w.startsWith(s) && w.length > s.length) { score.Hindu   += 2; break; } }
+    }
+
+    const max = Math.max(score.Hindu, score.Muslim, score.Christian);
+    if (score.Muslim    === max) return 'Muslim';
+    if (score.Christian === max) return 'Christian';
+    if (score.Hindu     === max && max > 0.5) return 'Hindu';
+    return 'Other';
 }
 
 export default function Reports() {
