@@ -157,7 +157,7 @@ const VoterSlipItem = React.memo(({ voter, isSelected, onToggle, candidatePhoto,
                     </label>
                 </div>
 
-                <div className="compact-slip-inner" style={{ display: 'flex', border: '1px solid #bbb', borderRadius: '5px', overflow: 'hidden', background: '#fff', fontFamily: 'sans-serif' }}>
+                <div className="compact-slip-inner" style={{ display: 'flex', border: '1px solid #bbb', borderRadius: '5px', overflow: 'hidden', background: '#fff', fontFamily: "'Anek Malayalam', sans-serif" }}>
 
                     {/* Left panel: colored strip with photo + symbol */}
                     <div style={{ width: '58px', background: 'linear-gradient(170deg, #3b1120 0%, var(--primary-bg) 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '8px 4px', flexShrink: 0 }}>
@@ -171,10 +171,10 @@ const VoterSlipItem = React.memo(({ voter, isSelected, onToggle, candidatePhoto,
                     </div>
 
                     {/* Right panel: SL box + voter data */}
-                    <div style={{ flex: 1, display: 'flex' }}>
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'stretch' }}>
 
-                        {/* SL No box */}
-                        <div style={{ width: '46px', borderRight: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7f7f7', flexShrink: 0 }}>
+                        {/* SL No box — pinned to top */}
+                        <div style={{ width: '46px', borderRight: '1px solid #e0e0e0', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '8px', background: '#f7f7f7', flexShrink: 0 }}>
                             <div style={{ border: '2px solid #2d2d2d', borderRadius: '3px', width: '36px', textAlign: 'center', padding: '2px 0' }}>
                                 <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#111', lineHeight: 1 }}>{voter.sl_no}</div>
                             </div>
