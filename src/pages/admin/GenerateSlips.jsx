@@ -157,31 +157,31 @@ const VoterSlipItem = React.memo(({ voter, isSelected, onToggle, candidatePhoto,
                     </label>
                 </div>
 
-                <div style={{ display: 'flex', border: '1px solid #c0bfbf', borderRadius: '5px', overflow: 'hidden', background: '#fff', fontFamily: 'sans-serif', minHeight: '72px' }}>
+                <div className="compact-slip-inner" style={{ display: 'flex', border: '1px solid #bbb', borderRadius: '5px', overflow: 'hidden', background: '#fff', fontFamily: 'sans-serif' }}>
 
                     {/* Left panel: colored strip with photo + symbol */}
-                    <div style={{ width: '60px', background: 'linear-gradient(170deg, #3b1120 0%, var(--primary-bg) 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '6px 3px', flexShrink: 0 }}>
-                        <div style={{ fontSize: '0.45rem', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: '700' }}>VOTE FOR</div>
+                    <div style={{ width: '58px', background: 'linear-gradient(170deg, #3b1120 0%, var(--primary-bg) 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '8px 4px', flexShrink: 0 }}>
+                        <div style={{ fontSize: '0.42rem', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: '700' }}>VOTE FOR</div>
                         {candidatePhoto
-                            ? <img src={candidatePhoto} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(255,255,255,0.85)' }} />
-                            : <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.45rem', color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>ഫോട്ടോ</div>}
+                            ? <img src={candidatePhoto} alt="" style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(255,255,255,0.85)' }} />
+                            : <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.45rem', color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>ഫോട്ടോ</div>}
                         {symbolPreview
-                            ? <img src={symbolPreview} alt="" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
-                            : <div style={{ width: '28px', height: '28px', background: 'rgba(255,255,255,0.12)', borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.42rem', color: 'rgba(255,255,255,0.55)' }}>ചിഹ്നം</div>}
+                            ? <img src={symbolPreview} alt="" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
+                            : <div style={{ width: '30px', height: '30px', background: 'rgba(255,255,255,0.12)', borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.42rem', color: 'rgba(255,255,255,0.55)' }}>ചിഹ്നം</div>}
                     </div>
 
-                    {/* Right panel: SL box + voter data only */}
-                    <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+                    {/* Right panel: SL box + voter data */}
+                    <div style={{ flex: 1, display: 'flex' }}>
 
                         {/* SL No box */}
-                        <div style={{ width: '44px', borderRight: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9f9f9', flexShrink: 0 }}>
-                            <div style={{ border: '2px solid #2d2d2d', borderRadius: '3px', width: '34px', textAlign: 'center', padding: '1px 0' }}>
-                                <div style={{ fontSize: '1.35rem', fontWeight: '900', color: '#111', lineHeight: 1.05 }}>{voter.sl_no}</div>
+                        <div style={{ width: '46px', borderRight: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7f7f7', flexShrink: 0 }}>
+                            <div style={{ border: '2px solid #2d2d2d', borderRadius: '3px', width: '36px', textAlign: 'center', padding: '2px 0' }}>
+                                <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#111', lineHeight: 1 }}>{voter.sl_no}</div>
                             </div>
                         </div>
 
-                        {/* Voter data fields */}
-                        <div style={{ flex: 1, padding: '5px 7px', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '1.5px 6px', alignContent: 'center', minWidth: 0 }}>
+                        {/* Voter data — full text, no truncation */}
+                        <div style={{ flex: 1, padding: '6px 8px', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '2px 8px', alignContent: 'center' }}>
                             {[
                                 ['Name', voter.name],
                                 ['Guardian', voter.guardian_name],
@@ -191,8 +191,8 @@ const VoterSlipItem = React.memo(({ voter, isSelected, onToggle, candidatePhoto,
                                 ['Booth', `${boothNo} — ${boothName}`],
                             ].map(([label, value]) => value ? (
                                 <React.Fragment key={label}>
-                                    <span style={{ fontSize: '0.6rem', color: '#888', fontWeight: '700', whiteSpace: 'nowrap', lineHeight: 1.4 }}>{label}</span>
-                                    <span style={{ fontSize: '0.68rem', color: '#111', fontWeight: label === 'Name' ? '700' : '400', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</span>
+                                    <span style={{ fontSize: '0.6rem', color: '#777', fontWeight: '700', whiteSpace: 'nowrap', lineHeight: 1.45, alignSelf: 'start', paddingTop: '1px' }}>{label}</span>
+                                    <span style={{ fontSize: '0.7rem', color: '#111', fontWeight: label === 'Name' ? '700' : '400', lineHeight: 1.35, wordBreak: 'break-word' }}>{value}</span>
                                 </React.Fragment>
                             ) : null)}
                         </div>
@@ -1447,16 +1447,29 @@ export default function GenerateSlips() {
                         display: none !important;
                     }
 
-                    /* Compact template: 3 per row on A4 */
+                    /* Compact template: 2 per row on A4 — wide enough for full text */
                     .print-area.template-compact #print-area-content {
                         display: grid;
-                        grid-template-columns: repeat(3, 1fr);
-                        gap: 6px;
+                        grid-template-columns: repeat(2, 1fr);
+                        gap: 8px 12px;
                         align-items: start;
                     }
                     .print-area.template-compact .compact-slip {
                         margin-bottom: 0;
                         break-inside: avoid;
+                        position: relative;
+                    }
+                    /* Hide all interactive elements in compact print */
+                    .print-area.template-compact .slip-actions,
+                    .print-area.template-compact .no-print,
+                    .print-area.template-compact input[type="checkbox"],
+                    .print-area.template-compact .modern-checkbox,
+                    .print-area.template-compact .checkmark {
+                        display: none !important;
+                    }
+                    /* Ensure text wraps fully and is not clipped */
+                    .print-area.template-compact .compact-slip-inner {
+                        border: 0.5pt solid #999;
                     }
                     .print-area.template-compact.printing-selected .compact-slip:not(.selected) {
                         display: none !important;
