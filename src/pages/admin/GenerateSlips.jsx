@@ -171,28 +171,29 @@ const VoterSlipItem = React.memo(({ voter, isSelected, onToggle, candidatePhoto,
                             : <div style={{ width: '30px', height: '30px', background: 'rgba(255,255,255,0.12)', borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.42rem', color: 'rgba(255,255,255,0.55)' }}>ചിഹ്നം</div>}
                     </div>
 
-                    {/* Col 2 — Serial number, vertically centered */}
-                    <div style={{ width: '50px', flexShrink: 0, borderRight: '1px solid #ddd', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <div style={{ border: '2px solid #222', borderRadius: '4px', minWidth: '36px', textAlign: 'center', padding: '3px 4px' }}>
-                            <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#111', lineHeight: 1 }}>{voter.sl_no}</div>
+                    {/* Col 2 — Voter details with SL No pinned to top-right */}
+                    <div style={{ flex: 1, padding: '6px 8px 6px 10px', position: 'relative' }}>
+                        {/* SL No — top-right corner box */}
+                        <div style={{ position: 'absolute', top: '6px', right: '7px', border: '2px solid #222', borderRadius: '4px', minWidth: '30px', textAlign: 'center', padding: '1px 5px', background: '#f5f5f5' }}>
+                            <div style={{ fontSize: '1.35rem', fontWeight: '900', color: '#111', lineHeight: 1.1 }}>{voter.sl_no}</div>
                         </div>
-                    </div>
 
-                    {/* Col 3 — Voter details, full text wrap */}
-                    <div style={{ flex: 1, padding: '6px 8px', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '2px 8px', alignContent: 'center' }}>
-                        {[
-                            ['Name', voter.name],
-                            ['Guardian', voter.guardian_name],
-                            ['House', `${voter.house_no ? voter.house_no + ' / ' : ''}${voter.house_name || ''}`],
-                            ['Gender/Age', `${isMale ? 'M' : 'F'} / ${voter.age}`],
-                            ['SEC ID', voter.id_card_no],
-                            ['Booth', `${boothNo} — ${boothName}`],
-                        ].map(([label, value]) => value ? (
-                            <React.Fragment key={label}>
-                                <span style={{ fontSize: '0.6rem', color: '#777', fontWeight: '700', whiteSpace: 'nowrap', lineHeight: 1.45, alignSelf: 'start', paddingTop: '1px' }}>{label}</span>
-                                <span style={{ fontSize: '0.7rem', color: '#111', fontWeight: label === 'Name' ? '700' : '400', lineHeight: 1.35, wordBreak: 'break-word' }}>{value}</span>
-                            </React.Fragment>
-                        ) : null)}
+                        {/* Data rows — right padding leaves room for SL box */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '2px 8px', paddingRight: '44px' }}>
+                            {[
+                                ['Name', voter.name],
+                                ['Guardian', voter.guardian_name],
+                                ['House', `${voter.house_no ? voter.house_no + ' / ' : ''}${voter.house_name || ''}`],
+                                ['Gender/Age', `${isMale ? 'M' : 'F'} / ${voter.age}`],
+                                ['SEC ID', voter.id_card_no],
+                                ['Booth', `${boothNo} — ${boothName}`],
+                            ].map(([label, value]) => value ? (
+                                <React.Fragment key={label}>
+                                    <span style={{ fontSize: '0.6rem', color: '#777', fontWeight: '700', whiteSpace: 'nowrap', lineHeight: 1.45, alignSelf: 'start', paddingTop: '1px' }}>{label}</span>
+                                    <span style={{ fontSize: '0.7rem', color: '#111', fontWeight: label === 'Name' ? '700' : '400', lineHeight: 1.35, wordBreak: 'break-word' }}>{value}</span>
+                                </React.Fragment>
+                            ) : null)}
+                        </div>
                     </div>
                 </div>
 
