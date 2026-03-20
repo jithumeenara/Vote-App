@@ -139,19 +139,17 @@ const VoterSlipItem = React.memo(({ voter, isSelected, onToggle, candidatePhoto,
         );
     }
 
-    // Compact Template — ticket-style layout (inspired by printed voter slips)
+    // Compact Template — clean 2-3 per row A4 layout, no header/footer bars, no barcode
     if (template === 'compact') {
         const isMale = voter.gender === 'Male' || voter.gender === 'പുരുഷൻ' || voter.gender === 'M';
-        const constituencyName = voter.booths?.constituencies?.name || '';
-        const constituencyNo = voter.booths?.constituencies?.constituency_no || '';
         const boothNo = voter.booths?.booth_no || '';
         const boothName = voter.booths?.name || '';
 
         return (
-            <div id={`slip-${voter.id}`} className={`voter-slip-container ${isSelected ? 'selected' : ''}`} style={{ marginBottom: '12px' }}>
+            <div id={`slip-${voter.id}`} className={`voter-slip-container compact-slip ${isSelected ? 'selected' : ''}`} style={{ marginBottom: '8px' }}>
                 <div className="no-print slip-actions ignore-in-image" style={{ position: 'absolute', top: '4px', right: '4px', zIndex: 100, display: 'flex', gap: '6px', alignItems: 'center' }}>
                     <button onClick={handleShare} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '3px', display: 'flex', alignItems: 'center' }}>
-                        <Share size={15} />
+                        <Share size={14} />
                     </button>
                     <label className="modern-checkbox">
                         <input type="checkbox" checked={isSelected} onChange={() => onToggle(voter.id)} />
@@ -159,74 +157,44 @@ const VoterSlipItem = React.memo(({ voter, isSelected, onToggle, candidatePhoto,
                     </label>
                 </div>
 
-                <div style={{ display: 'flex', border: '1.5px solid #bbb', borderRadius: '6px', overflow: 'hidden', background: '#fff', fontSize: '0.8rem', boxShadow: '0 1px 4px rgba(0,0,0,0.10)', fontFamily: 'sans-serif' }}>
+                <div style={{ display: 'flex', border: '1px solid #c0bfbf', borderRadius: '5px', overflow: 'hidden', background: '#fff', fontFamily: 'sans-serif', minHeight: '72px' }}>
 
-                    {/* ── Left Panel: photo + symbol + "VOTE FOR" ── */}
-                    <div style={{ width: '70px', background: 'linear-gradient(160deg, var(--primary-bg) 60%, #8b1a2e)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px 4px' }}>
-                        <div style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '700' }}>VOTE FOR</div>
+                    {/* Left panel: colored strip with photo + symbol */}
+                    <div style={{ width: '60px', background: 'linear-gradient(170deg, #3b1120 0%, var(--primary-bg) 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '6px 3px', flexShrink: 0 }}>
+                        <div style={{ fontSize: '0.45rem', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: '700' }}>VOTE FOR</div>
                         {candidatePhoto
-                            ? <img src={candidatePhoto} alt="" style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.8)' }} />
-                            : <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', color: 'rgba(255,255,255,0.7)', textAlign: 'center' }}>ഫോട്ടോ</div>}
+                            ? <img src={candidatePhoto} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(255,255,255,0.85)' }} />
+                            : <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.45rem', color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>ഫോട്ടോ</div>}
                         {symbolPreview
-                            ? <img src={symbolPreview} alt="" style={{ width: '34px', height: '34px', objectFit: 'contain' }} />
-                            : <div style={{ width: '34px', height: '34px', background: 'rgba(255,255,255,0.12)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.5rem', color: 'rgba(255,255,255,0.6)' }}>ചിഹ്നം</div>}
-                        <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.65)', textAlign: 'center', lineHeight: 1.2 }}>നമ്മുടെ ചിഹ്നം</div>
+                            ? <img src={symbolPreview} alt="" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
+                            : <div style={{ width: '28px', height: '28px', background: 'rgba(255,255,255,0.12)', borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.42rem', color: 'rgba(255,255,255,0.55)' }}>ചിഹ്നം</div>}
                     </div>
 
-                    {/* ── Right Panel ── */}
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    {/* Right panel: SL box + voter data only */}
+                    <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-                        {/* Header bar: constituency */}
-                        <div style={{ background: '#1a1a2e', color: '#fff', padding: '3px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontWeight: '800', fontSize: '0.78rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                                {constituencyNo ? `C${String(constituencyNo).padStart(5,'0')}-` : ''}{constituencyName.toUpperCase()}
-                            </span>
-                        </div>
-
-                        {/* Sub-header: booth */}
-                        <div style={{ background: '#e8f0fe', borderBottom: '1px solid #c7d2fe', padding: '2px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontWeight: '700', fontSize: '0.72rem', color: '#1e3a8a' }}>
-                                WARD: {String(boothNo).padStart(3,'0')}-{boothName.toUpperCase()}
-                            </span>
-                            <span style={{ fontSize: '0.68rem', color: '#374151' }}>Polling Station: <strong>{boothNo}</strong></span>
-                        </div>
-
-                        {/* Body: SL No + voter data */}
-                        <div style={{ display: 'flex', flex: 1 }}>
-
-                            {/* SL No box */}
-                            <div style={{ width: '52px', borderRight: '1.5px solid #e5e7eb', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4px', background: '#fafafa' }}>
-                                <div style={{ border: '2px solid #374151', borderRadius: '4px', width: '38px', textAlign: 'center', padding: '2px 0' }}>
-                                    <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#111', lineHeight: 1 }}>{voter.sl_no}</div>
-                                </div>
-                            </div>
-
-                            {/* Voter fields */}
-                            <div style={{ flex: 1, padding: '5px 8px', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '1px 8px', alignContent: 'center' }}>
-                                {[
-                                    ['Name', voter.name],
-                                    ['Guardian Name', voter.guardian_name],
-                                    ['House No / Ward', `${voter.booths?.constituencies?.constituency_no || ''}/${voter.house_no}`],
-                                    ['Gender/Age', `${isMale ? 'M' : 'F'} / ${voter.age}`],
-                                    ['New SEC ID No', voter.id_card_no],
-                                ].map(([label, value]) => (
-                                    <React.Fragment key={label}>
-                                        <span style={{ fontSize: '0.67rem', color: '#6b7280', fontWeight: '600', whiteSpace: 'nowrap' }}>{label}</span>
-                                        <span style={{ fontSize: '0.72rem', color: '#111', fontWeight: label === 'Name' ? '700' : '400' }}>{value}</span>
-                                    </React.Fragment>
-                                ))}
+                        {/* SL No box */}
+                        <div style={{ width: '44px', borderRight: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9f9f9', flexShrink: 0 }}>
+                            <div style={{ border: '2px solid #2d2d2d', borderRadius: '3px', width: '34px', textAlign: 'center', padding: '1px 0' }}>
+                                <div style={{ fontSize: '1.35rem', fontWeight: '900', color: '#111', lineHeight: 1.05 }}>{voter.sl_no}</div>
                             </div>
                         </div>
 
-                        {/* Footer: barcode-style ID strip */}
-                        <div style={{ background: '#1a1a2e', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            {/* Simulated barcode lines */}
-                            <div style={{ display: 'flex', gap: '1px', alignItems: 'center', flex: 1 }}>
-                                {Array.from({ length: 28 }, (_, i) => (
-                                    <div key={i} style={{ width: i % 3 === 0 ? '3px' : '1.5px', height: i % 5 === 0 ? '14px' : '10px', background: 'white', opacity: 0.9 }} />
-                                ))}
-                            </div>
-                            <span style={{ fontSize: '0.65rem', color: '#e5e7eb', fontWeight: '700', letterSpacing: '1px', whiteSpace: 'nowrap' }}>{voter.id_card_no}</span>
+                        {/* Voter data fields */}
+                        <div style={{ flex: 1, padding: '5px 7px', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '1.5px 6px', alignContent: 'center', minWidth: 0 }}>
+                            {[
+                                ['Name', voter.name],
+                                ['Guardian', voter.guardian_name],
+                                ['House', `${voter.house_no ? voter.house_no + ' / ' : ''}${voter.house_name || ''}`],
+                                ['Gender/Age', `${isMale ? 'M' : 'F'} / ${voter.age}`],
+                                ['SEC ID', voter.id_card_no],
+                                ['Booth', `${boothNo} — ${boothName}`],
+                            ].map(([label, value]) => value ? (
+                                <React.Fragment key={label}>
+                                    <span style={{ fontSize: '0.6rem', color: '#888', fontWeight: '700', whiteSpace: 'nowrap', lineHeight: 1.4 }}>{label}</span>
+                                    <span style={{ fontSize: '0.68rem', color: '#111', fontWeight: label === 'Name' ? '700' : '400', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</span>
+                                </React.Fragment>
+                            ) : null)}
                         </div>
                     </div>
                 </div>
@@ -1130,7 +1098,7 @@ export default function GenerateSlips() {
                 )}
             </div>
 
-            <div className={`print-area ${selectedVoters.size > 0 || individualSelectedVoters.length > 0 ? 'printing-selected' : ''}`}>
+            <div className={`print-area ${selectedVoters.size > 0 || individualSelectedVoters.length > 0 ? 'printing-selected' : ''} ${selectedTemplate === 'compact' ? 'template-compact' : ''}`}>
                 <div id="print-area-content">
                     {activeTab === 'booth' && filteredVoters.map((voter) => (
                         <VoterSlipItem
@@ -1452,7 +1420,7 @@ export default function GenerateSlips() {
                 @media print {
                     @page {
                         size: A4;
-                        margin: 0.5cm;
+                        margin: 0.8cm;
                     }
                     body * {
                         visibility: hidden;
@@ -1476,6 +1444,21 @@ export default function GenerateSlips() {
                         display: none !important;
                     }
                     .print-area.printing-selected .voter-slip-container:not(.selected) {
+                        display: none !important;
+                    }
+
+                    /* Compact template: 3 per row on A4 */
+                    .print-area.template-compact #print-area-content {
+                        display: grid;
+                        grid-template-columns: repeat(3, 1fr);
+                        gap: 6px;
+                        align-items: start;
+                    }
+                    .print-area.template-compact .compact-slip {
+                        margin-bottom: 0;
+                        break-inside: avoid;
+                    }
+                    .print-area.template-compact.printing-selected .compact-slip:not(.selected) {
                         display: none !important;
                     }
                 }
