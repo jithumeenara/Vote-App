@@ -172,7 +172,7 @@ const VoterSlipItem = React.memo(({ voter, isSelected, onToggle, candidatePhoto,
                     </div>
 
                     {/* Col 2 — Voter details with SL No pinned to top-right */}
-                    <div style={{ flex: 1, padding: '6px 8px 6px 10px', position: 'relative' }}>
+                    <div style={{ flex: 1, padding: '6px 8px 6px 10px', position: 'relative', borderLeft: '2px solid #bbb' }}>
                         {/* SL No — top-right corner box */}
                         <div style={{ position: 'absolute', top: '6px', right: '7px', border: '2px solid #222', borderRadius: '4px', minWidth: '30px', textAlign: 'center', padding: '1px 5px', background: '#f5f5f5' }}>
                             <div style={{ fontSize: '1.35rem', fontWeight: '900', color: '#111', lineHeight: 1.1 }}>{voter.sl_no}</div>
